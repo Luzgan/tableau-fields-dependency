@@ -1,12 +1,16 @@
 import React from "react";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
-import GlobalStyles from "@mui/material/GlobalStyles";
+import {
+  CssBaseline,
+  GlobalStyles,
+  Typography,
+  Container,
+  AppBar,
+  Toolbar,
+  Box,
+} from "@mui/material";
 import FileUpload from "./FileUpload";
-import Typography from "@mui/material/Typography";
-import Container from "@mui/material/Container";
 import Data from "./Data";
-import Graph from "./Graph";
 
 const defaultTheme = createTheme();
 
@@ -24,21 +28,15 @@ export default class App extends React.Component {
       <ThemeProvider theme={defaultTheme}>
         <GlobalStyles styles={{}} />
         <CssBaseline />
-        <Container
-          disableGutters
-          maxWidth="lg"
-          component="main"
-          sx={{ pt: 8, pb: 4 }}
-        >
-          <Typography
-            component="h1"
-            variant="h2"
-            align="center"
-            color="text.primary"
-            gutterBottom
-          >
-            Tableau field dependency reader
-          </Typography>
+        <AppBar component="nav">
+          <Toolbar>
+            <Typography style={{ flexGrow: 1 }} component="div" variant="h6">
+              Tableau field explorer
+            </Typography>
+          </Toolbar>
+        </AppBar>
+        <Box style={{ height: "64px" }}></Box>
+        <Container maxWidth="lg" component="main" sx={{ pt: 2, pb: 4 }}>
           <Typography
             variant="h5"
             align="center"

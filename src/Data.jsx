@@ -1,5 +1,5 @@
 import React from "react";
-import DataList from "./DataList";
+import FieldsTab from "./FieldsTab";
 import { Box, Tabs, Tab, Container } from "@mui/material";
 
 function CustomTabPanel(props) {
@@ -41,15 +41,15 @@ export default class Data extends React.Component {
           <Tabs
             value={this.state.selectedTab}
             onChange={this.handleChange}
-            aria-label="Data tabs"
+            aria-label="Data explorer tabs"
           >
-            <Tab label="List" {...this.a11yProps(0)} />
+            <Tab label="Fields" {...this.a11yProps(0)} />
             {/* <Tab label="Item Two" {...this.a11yProps(1)} />
             <Tab label="Item Three" {...this.a11yProps(2)} /> */}
           </Tabs>
         </Box>
         <CustomTabPanel value={this.state.selectedTab} index={0}>
-          <DataList data={this.props.data} />
+          <FieldsTab data={this.props.data} />
         </CustomTabPanel>
         {/* <CustomTabPanel value={this.state.selectedTab} index={1}>
           Item Two

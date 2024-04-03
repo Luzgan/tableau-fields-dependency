@@ -128,6 +128,7 @@ export default class FileUpload extends React.Component {
           style={{ display: "none" }}
           ref={this.inputRef}
           type="file"
+          accept=".twb"
           onChange={this.onFileChange}
         />
       </Container>
