@@ -104,7 +104,6 @@ export default class Graph extends React.Component {
       // d.style("stroke", "black").style("opacity", 1);
     };
     const mousemove = function (d) {
-      console.log(d);
       tooltip
         .html(d?.caption ?? d.name)
         .style("left", d.x + 70 + "px")
