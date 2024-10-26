@@ -15,14 +15,6 @@ import Data from "./Data";
 const defaultTheme = createTheme();
 
 export default class App extends React.Component {
-  state = {
-    data: null,
-  };
-
-  setFileData = (data) => {
-    this.setState({ data });
-  };
-
   render() {
     return (
       <ThemeProvider theme={defaultTheme}>
@@ -45,8 +37,8 @@ export default class App extends React.Component {
           >
             Choose *.twb file below.
           </Typography>
-          <FileUpload setFileData={this.setFileData} />
-          {this.state.data && <Data data={this.state.data} />}
+          <FileUpload setFileData={this.props.setFileData} />
+          {this.props.data && <Data data={this.props.data} />}
           {/* <Graph data={this.state.data} /> */}
         </Container>
       </ThemeProvider>

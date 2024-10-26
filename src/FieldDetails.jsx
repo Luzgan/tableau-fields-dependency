@@ -1,12 +1,14 @@
 import React from "react";
 import he from "he";
-import { Box, Typography, Grid } from "@mui/material";
+import { Box, Typography, Grid, Button, Link } from "@mui/material";
+import { ArrowBackIos } from "@mui/icons-material";
 
 export default class FieldDetails extends React.Component {
   renderLine = (label, value) => {
     return (
       <Grid
         sx={{ px: 2 }}
+        paddingY={1}
         maxWidth={1600}
         container
         spacing={2}
@@ -21,6 +23,19 @@ export default class FieldDetails extends React.Component {
       </Grid>
     );
   };
+
+  goBack = () => {
+    if (this.props.subpage === "mainField") {
+      this.props.goToSubpage(null);
+    } else {
+      this.props.goToSubpage("mainField");
+    }
+  };
+
+  getFieldName = (field) => {
+    return field.caption ?? field.name;
+  };
+
   renderFieldDetails = () => {
     const selectedField = this.props.data.nodes.find(
       (node) => node.id === this.props.selectedField
@@ -28,7 +43,7 @@ export default class FieldDetails extends React.Component {
 
     return (
       <>
-        {this.renderLine("Name:", selectedField.caption ?? selectedField.name)}
+        {this.renderLine("Name:", this.getFieldName(selectedField))}
         {this.renderLine("Field type:", selectedField.fieldtype)}
         {this.renderLine("Role:", selectedField.role)}
         {this.renderLine("Data type:", selectedField.datatype)}
@@ -40,11 +55,11 @@ export default class FieldDetails extends React.Component {
           : null}
         {this.renderLine(
           "No. direct references:",
-          selectedField?.usedIn?.length ?? 0
+          <Link href="#">{selectedField?.usedIn?.length ?? 0}</Link>
         )}
         {this.renderLine(
           "No. indirect references:",
-          selectedField?.usedInDeep?.length ?? 0
+          <Link href="#">{selectedField?.usedInDeep?.length ?? 0}</Link>
         )}
       </>
     );
@@ -62,10 +77,30 @@ export default class FieldDetails extends React.Component {
     // );
   };
 
+  renderFieldDirectReferences = () => {
+    <>{this.renderLine("test:", "")}</>;
+  };
+
+  renderFieldIndirectReferences = () => {
+    <>{this.renderLine("test:", "")}</>;
+  };
+
   render() {
+    console.log(this.props);
     return (
       <Box maxWidth="lg" component="div" flexGrow={1}>
-        {this.props.selectedField === null && (
+        {/* {this.props.subpage !== null && (
+          <Box sx={{ px: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIos />}
+              onClick={this.goBack}
+            >
+              Go back
+            </Button>
+          </Box>
+        )}
+        {this.props.subpage === null && (
           <Typography
             variant="h5"
             align="center"
@@ -75,7 +110,11 @@ export default class FieldDetails extends React.Component {
             Choose field on the left to see the details.
           </Typography>
         )}
-        {this.props.selectedField !== null && this.renderFieldDetails()}
+        {this.props.subpage === "mainField" && this.renderFieldDetails()}
+        {this.props.subpage === "directReferences" &&
+          this.renderFieldDirectReferences()}
+        {this.props.subpage === "indirectReferences" &&
+          this.renderFieldDirectReferences()} */}
       </Box>
     );
   }

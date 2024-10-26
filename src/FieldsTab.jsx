@@ -1,15 +1,25 @@
 import React from "react";
+import { Outlet } from "react-router-dom";
 import FieldsList from "./FieldsList";
 import { Box } from "@mui/material";
 import FieldDetails from "./FieldDetails";
 
 export default class FieldsTab extends React.Component {
   state = {
+    subpage: null,
     selectedField: null,
   };
 
   onSelectField = (key) => {
-    this.setState({ selectedField: key });
+    this.setState({ selectedField: key, subpage: "mainField" });
+  };
+
+  goToSubpage = (key) => {
+    if (key === null) {
+      this.setState({ selectedField: null, subpage: null });
+    } else {
+      this.setState({ subpage: key });
+    }
   };
 
   render() {
@@ -20,10 +30,7 @@ export default class FieldsTab extends React.Component {
           selectedField={this.state.selectedField}
           onSelectField={this.onSelectField}
         />
-        <FieldDetails
-          data={this.props.data}
-          selectedField={this.state.selectedField}
-        />
+        <Outlet />
       </Box>
     );
   }
