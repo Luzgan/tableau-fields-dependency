@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   createBrowserRouter,
@@ -7,50 +7,35 @@ import {
   Route,
 } from "react-router-dom";
 import App from "./App";
+import FieldDetails from "./FieldDetails";
+import NoFieldSelected from "./NoFieldSelected";
+import ReferencesList from "./ReferencesList";
 
-class Main extends React.Component {
-  state = {
-    data: null,
-  };
+function Main() {
+  const [data, setData] = useState(null);
 
-  setFileData = (data) => {
-    this.setState({ data });
-  };
-
-  render() {
-    {
-      /* 
-              <Route path="dashboard" element={<Dashboard />} /> */
-    }
-    return (
-      <Routes>
+  return (
+    <Routes>
+      <Route path="/" element={<App data={data} setFileData={setData} />}>
+        <Route path="/" element={<NoFieldSelected />} />
+        <Route path="field/:fieldId" element={<FieldDetails data={data} />} />
         <Route
-          index
-          path="*"
-          element={
-            <App data={this.state.data} setFileData={this.setFileData} />
-          }
-        >
-          <Route
-            path="field/:fieldId"
-            element={
-              <FieldDetails
-                data={this.props.data}
-                subpage={this.state.subpage}
-                selectedField={this.state.selectedField}
-                goToSubpage={this.goToSubpage}
-              />
-            }
-          />
-        </Route>
-      </Routes>
-    );
-  }
+          path="field/:fieldId/indirect"
+          element={<ReferencesList indirect data={data} />}
+        />
+        <Route
+          path="field/:fieldId/direct"
+          element={<ReferencesList data={data} />}
+        />
+        <Route path="*" element={<div />} />
+      </Route>
+    </Routes>
+  );
 }
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: "*",
     element: <Main />,
   },
 ]);

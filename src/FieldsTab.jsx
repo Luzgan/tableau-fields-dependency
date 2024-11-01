@@ -1,37 +1,34 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Outlet } from "react-router-dom";
 import FieldsList from "./FieldsList";
-import { Box } from "@mui/material";
-import FieldDetails from "./FieldDetails";
+import { Box, Button } from "@mui/material";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowBackIos } from "@mui/icons-material";
+import * as _ from "lodash";
 
-export default class FieldsTab extends React.Component {
-  state = {
-    subpage: null,
-    selectedField: null,
-  };
-
-  onSelectField = (key) => {
-    this.setState({ selectedField: key, subpage: "mainField" });
-  };
-
-  goToSubpage = (key) => {
-    if (key === null) {
-      this.setState({ selectedField: null, subpage: null });
-    } else {
-      this.setState({ subpage: key });
-    }
-  };
-
-  render() {
-    return (
-      <Box maxWidth="lg" component="div" sx={{ py: 4 }} display={"flex"}>
-        <FieldsList
-          data={this.props.data}
-          selectedField={this.state.selectedField}
-          onSelectField={this.onSelectField}
-        />
+export default function FieldsTab(props) {
+  const navigate = useNavigate();
+  const goBack = useCallback(() => {
+    navigate(-1);
+  }, []);
+  const { fieldId } = useParams();
+  return (
+    <Box maxWidth="lg" component="div" sx={{ py: 4 }} display={"flex"}>
+      <FieldsList data={props.data} />
+      <Box maxWidth="lg" component="div" flexGrow={1}>
+        {!_.isNil(fieldId) && (
+          <Box sx={{ px: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIos />}
+              onClick={goBack}
+            >
+              Go back
+            </Button>
+          </Box>
+        )}
         <Outlet />
       </Box>
-    );
-  }
+    </Box>
+  );
 }

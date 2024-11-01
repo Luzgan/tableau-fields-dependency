@@ -16,4 +16,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/static", express.static(path.join(__dirname, "/dist")));
+app.get("*", (req, res) => {
+  res.redirect("/");
+});
 app.listen(3000);
