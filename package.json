@@ -6,7 +6,7 @@
   "scripts": {
     "start": "RESOURCES_URL=http://localhost:9000 node index.js",
     "serve": "webpack serve --config webpack.config.dev.js",
-    "build": "webpack --config webpack.config.dev.js"
+    "build": "webpack --config webpack.config.prod.js"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",
