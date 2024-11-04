@@ -17,14 +17,22 @@ const getFieldtype = (column) => {
   return "sourcefield";
 };
 
-const recurrentListOfFields = (row) => {
-  const newUsedInList = [];
-  for (const usedRow of row.usedIn) {
-    if (usedRow?.usedIn?.length) {
-      newUsedInList.push(...recurrentListOfFields(usedRow));
+const getIndirectUsedInFields = (row) => {
+  const indirectUsedIn = [];
+  const listToCheck = [];
+  for (const initialUsedField of row.usedIn) {
+    listToCheck.push(...initialUsedField.usedIn);
+    while (listToCheck.length > 0) {
+      const deepUsedIns = listToCheck.pop()?.usedIn ?? [];
+      for (const deepUsedIn of deepUsedIns) {
+        if (!indirectUsedIn.find((value) => value === deepUsedIn)) {
+          listToCheck.push(deepUsedIn);
+          indirectUsedIn.push(deepUsedIn);
+        }
+      }
     }
   }
-  return newUsedInList;
+  return indirectUsedIn;
 };
 
 const cleanCalculation = (calculation) => {
@@ -72,13 +80,13 @@ const onFileChange = async (event, setFilename, setFileData) => {
   );
 
   for (const row of flatStructure) {
+    if (!row.usedIn) {
+      row.usedIn = [];
+    }
     for (const calculation of calculations) {
       const escapeStringRegexp = (await import("escape-string-regexp")).default;
       const regexp = new RegExp(escapeStringRegexp(row.name));
       if (regexp.test(calculation.calculation)) {
-        if (!row.usedIn) {
-          row.usedIn = [];
-        }
         row.usedIn.push(calculation);
       }
     }
@@ -86,7 +94,7 @@ const onFileChange = async (event, setFilename, setFileData) => {
 
   for (const row of flatStructure) {
     if (row?.usedIn?.length > 0) {
-      row.usedInDeep = recurrentListOfFields(row);
+      row.usedInDeep = getIndirectUsedInFields(row);
     }
   }
 
