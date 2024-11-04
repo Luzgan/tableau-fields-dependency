@@ -25,17 +25,20 @@ function Line({ label, value }) {
 }
 
 function Calculation({ calculation, data }) {
-  console.log(data);
   const replaceWithLinks = (input) => {
     return input.split(/\[([^\]]+)\]/g).map((part, index) => {
       if (index % 2 === 1) {
         const node = data.nodes.find((node) => node.name === `[${part}]`);
         if (!node) {
-          return `[${part}]`;
+          return <span key={index}>`[${part}]`</span>;
         }
 
         const displayName = node.caption ? `[${node.caption}]` : node.name;
-        return <Link to={`/field/${node.id}`}>{displayName}</Link>;
+        return (
+          <Link key={index} to={`/field/${node.id}`}>
+            {displayName}
+          </Link>
+        );
       }
       return part;
     });
