@@ -45,33 +45,43 @@ const cleanCalculation = (calculation) => {
   return result;
 };
 
+const parseDatasource = (datasource, idIterator = 0) => {
+  const flatStructure = [];
+  const columns = datasource.column;
+  let i = idIterator;
+  for (const column of columns) {
+    const columnDefinition = _.omitBy(
+      {
+        id: `field-${i}`,
+        name: column?.["@_name"],
+        caption: column?.["@_caption"],
+        role: column?.["@_role"],
+        type: columns?.["@_type"],
+        datatype: column?.["@_datatype"],
+        fieldtype: getFieldtype(column),
+        calculation: cleanCalculation(column?.calculation?.["@_formula"]),
+      },
+      _.isUndefined
+    );
+    flatStructure.push(columnDefinition);
+    i++;
+  }
+  return flatStructure;
+};
+
 const onFileChange = async (event, setFilename, setFileData) => {
   setFilename(event.target.files[0].name);
   const data = parser.parse(await event.target.files[0].text());
 
-  const datasources = data.workbook.datasources.datasource;
+  const datasource = data?.workbook?.datasources?.datasource ?? [];
   const flatStructure = [];
 
-  let i = 0;
-  for (const datasource of datasources) {
-    const columns = datasource.column;
-    for (const column of columns) {
-      const columnDefinition = _.omitBy(
-        {
-          id: `field-${i}`,
-          name: column?.["@_name"],
-          caption: column?.["@_caption"],
-          role: column?.["@_role"],
-          type: columns?.["@_type"],
-          datatype: column?.["@_datatype"],
-          fieldtype: getFieldtype(column),
-          calculation: cleanCalculation(column?.calculation?.["@_formula"]),
-        },
-        _.isUndefined
-      );
-      flatStructure.push(columnDefinition);
-      i++;
+  if (Array.isArray(datasource)) {
+    for (const singleDS of datasource) {
+      flatStructure.push(...parseDatasource(singleDS, flatStructure.length));
     }
+  } else {
+    flatStructure.push(...parseDatasource(datasource));
   }
 
   const calculations = _.filter(
