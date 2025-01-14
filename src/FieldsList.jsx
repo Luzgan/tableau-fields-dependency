@@ -15,8 +15,8 @@ import {
 import * as _ from "lodash";
 import * as escape from "escape-string-regexp";
 
-const filterNodes = (data, fieldTypeFilter, search) => {
-  let filteredNodes = [...data.nodes];
+const filterNodes = (nodes, fieldTypeFilter, search) => {
+  let filteredNodes = [...nodes];
   if (fieldTypeFilter !== "all") {
     filteredNodes = _.filter(
       filteredNodes,
@@ -33,6 +33,22 @@ const filterNodes = (data, fieldTypeFilter, search) => {
   }
 
   return filteredNodes;
+};
+
+const sortNodes = (nodes) => {
+  const sortedNodes = [...nodes].sort((a, b) => {
+    const nameA = (a?.caption ?? a.name).toUpperCase();
+    const nameB = (b?.caption ?? b.name).toUpperCase();
+    if (nameA < nameB) {
+      return -1;
+    }
+    if (nameA > nameB) {
+      return 1;
+    }
+
+    return 0;
+  });
+  return sortedNodes;
 };
 
 function Field(props) {
@@ -69,7 +85,8 @@ export default function FieldsList(props) {
     debouncedSetSearch(event.target.value);
   });
 
-  const renderNodes = filterNodes(props.data, fieldTypeFilter, search);
+  const filteredNodes = filterNodes(props.data.nodes, fieldTypeFilter, search);
+  const sortedNodes = sortNodes(filteredNodes);
 
   return (
     <Box
@@ -108,7 +125,7 @@ export default function FieldsList(props) {
         aria-label="Fields selection"
         sx={{ overflow: "scroll", pt: 0 }}
       >
-        {renderNodes.map((node) => (
+        {sortedNodes.map((node) => (
           <Field node={node} key={node.id} />
         ))}
       </List>
