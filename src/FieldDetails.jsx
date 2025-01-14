@@ -84,6 +84,23 @@ export default function FieldDetails({ data }) {
           </Link>
         }
       />
+      <Grid
+        sx={{ px: 2 }}
+        paddingY={1}
+        maxWidth={1600}
+        container
+        spacing={2}
+        alignItems="center"
+      >
+        <Grid item xs={5}>
+          <Typography variant="h6">
+            <Link relative to="./graph">
+              See graph
+            </Link>
+          </Typography>
+        </Grid>
+        <Grid item xs={7}></Grid>
+      </Grid>
     </>
   );
 }

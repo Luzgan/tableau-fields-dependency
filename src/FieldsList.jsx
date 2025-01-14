@@ -72,14 +72,21 @@ export default function FieldsList(props) {
   const renderNodes = filterNodes(props.data, fieldTypeFilter, search);
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 240 }}>
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: 240,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <TextField
         style={{ width: "100%", marginBottom: "12px" }}
         id="field-search"
         label="Search"
         onChange={onSearchChange}
       />
-      <FormControl style={{ width: "100%", marginBottom: "24px" }}>
+      <FormControl style={{ width: "100%", marginBottom: "12px" }}>
         <InputLabel id="field-type-select-label">Field type</InputLabel>
         <Select
           style={{ width: "100%" }}
@@ -96,7 +103,11 @@ export default function FieldsList(props) {
         </Select>
       </FormControl>
 
-      <List component="nav" aria-label="Fields selection">
+      <List
+        component="nav"
+        aria-label="Fields selection"
+        sx={{ overflow: "scroll", pt: 0 }}
+      >
         {renderNodes.map((node) => (
           <Field node={node} key={node.id} />
         ))}

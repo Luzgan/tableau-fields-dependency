@@ -32,19 +32,18 @@ export default function Data(props) {
   }, []);
 
   return (
-    <Container maxWidth="lg" component="div">
-      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-        <Tabs
+    <Container maxWidth="lg" component="div" sx={{ overflow: "hidden" }}>
+      {/* <Box sx={{ borderBottom: 1, borderColor: "divider" }}> */}
+      <FieldsTab data={props.data} />
+      {/* <Tabs
           value={selectedTab}
           onChange={handleChange}
           aria-label="Data explorer tabs"
         >
           <Tab label="Fields" {...a11yProps(0)} />
-        </Tabs>
-      </Box>
-      <CustomTabPanel value={selectedTab} index={0}>
-        <FieldsTab data={props.data} />
-      </CustomTabPanel>
+        </Tabs> */}
+      {/* </Box> */}
+      {/* <CustomTabPanel value={selectedTab} index={0}></CustomTabPanel> */}
     </Container>
   );
 }

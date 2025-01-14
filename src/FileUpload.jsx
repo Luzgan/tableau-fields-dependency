@@ -144,7 +144,7 @@ export default function FileUpload(props) {
       align="center"
       maxWidth="sm"
       component="div"
-      sx={{ pt: 8, pb: 4 }}
+      sx={{ pt: 2, pb: 2 }}
     >
       <Typography>{filename ?? "No file selected"}</Typography>
       <Button variant="outlined" onClick={onClick}>
