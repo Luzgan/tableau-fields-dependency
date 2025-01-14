@@ -10,6 +10,7 @@ import App from "./App";
 import FieldDetails from "./FieldDetails";
 import NoFieldSelected from "./NoFieldSelected";
 import ReferencesList from "./ReferencesList";
+import Graph from "./Graph";
 
 function Main() {
   const [data, setData] = useState(null);
@@ -19,6 +20,7 @@ function Main() {
       <Route path="/" element={<App data={data} setFileData={setData} />}>
         <Route path="/" element={<NoFieldSelected />} />
         <Route path="field/:fieldId" element={<FieldDetails data={data} />} />
+        <Route path="field/:fieldId/graph" element={<Graph data={data} />} />
         <Route
           path="field/:fieldId/indirect"
           element={<ReferencesList indirect data={data} />}

@@ -13,11 +13,24 @@ export default function FieldsTab(props) {
   }, []);
   const { fieldId } = useParams();
   return (
-    <Box maxWidth="lg" component="div" sx={{ py: 4 }} display={"flex"}>
+    <Box
+      maxWidth="lg"
+      component="div"
+      sx={{ overflow: "hidden", maxHeight: "100%" }}
+      display={"flex"}
+    >
       <FieldsList data={props.data} />
-      <Box maxWidth="lg" component="div" flexGrow={1}>
+      <Box
+        maxWidth="lg"
+        component="div"
+        flexGrow={1}
+        maxHeight={"100%"}
+        overflow={"scroll"}
+        display={"flex"}
+        flexDirection={"column"}
+      >
         {!_.isNil(fieldId) && (
-          <Box sx={{ px: 2 }}>
+          <Box sx={{ px: 2, py: 2 }}>
             <Button
               variant="outlined"
               startIcon={<ArrowBackIos />}

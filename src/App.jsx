@@ -26,8 +26,19 @@ export default function App(props) {
           </Typography>
         </Toolbar>
       </AppBar>
-      <Box style={{ height: "64px" }}></Box>
-      <Container maxWidth="lg" component="main" sx={{ pt: 2, pb: 4 }}>
+      <Box style={{ height: "10vh" }}></Box>
+      <Container
+        maxWidth="lg"
+        component="main"
+        sx={{
+          pt: 0,
+          pb: 0,
+          height: "90vh",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Typography
           variant="h5"
           align="center"
@@ -38,7 +49,6 @@ export default function App(props) {
         </Typography>
         <FileUpload setFileData={props.setFileData} />
         {props.data && <Data data={props.data} />}
-        {/* <Graph data={this.state.data} /> */}
       </Container>
     </ThemeProvider>
   );
