@@ -45,27 +45,35 @@ const cleanCalculation = (calculation) => {
   return result;
 };
 
+const parseColumn = (column, i) => {
+  return _.omitBy(
+    {
+      id: `field-${i}`,
+      name: column?.["@_name"],
+      caption: column?.["@_caption"],
+      role: column?.["@_role"],
+      type: column?.["@_type"],
+      datatype: column?.["@_datatype"],
+      fieldtype: getFieldtype(column),
+      calculation: cleanCalculation(column?.calculation?.["@_formula"]),
+    },
+    _.isUndefined
+  );
+};
+
 const parseDatasource = (datasource, idIterator = 0) => {
   const flatStructure = [];
-  const columns = datasource.column;
-  let i = idIterator;
-  for (const column of columns) {
-    const columnDefinition = _.omitBy(
-      {
-        id: `field-${i}`,
-        name: column?.["@_name"],
-        caption: column?.["@_caption"],
-        role: column?.["@_role"],
-        type: columns?.["@_type"],
-        datatype: column?.["@_datatype"],
-        fieldtype: getFieldtype(column),
-        calculation: cleanCalculation(column?.calculation?.["@_formula"]),
-      },
-      _.isUndefined
-    );
-    flatStructure.push(columnDefinition);
-    i++;
+
+  if (Array.isArray(datasource.column)) {
+    let i = idIterator;
+    for (const column of datasource.column) {
+      flatStructure.push(parseColumn(column, i));
+      i++;
+    }
+  } else {
+    flatStructure.push(parseColumn(datasource.column, idIterator));
   }
+
   return flatStructure;
 };
 
