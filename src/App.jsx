@@ -22,7 +22,7 @@ export default function App(props) {
       <AppBar component="nav">
         <Toolbar>
           <Typography style={{ flexGrow: 1 }} component="div" variant="h6">
-            Tableau field explorer
+            Tableau workbook explorer
           </Typography>
         </Toolbar>
       </AppBar>
