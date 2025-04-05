@@ -42,9 +42,7 @@ const FileUpload: React.FC = () => {
       const calculationNodes = nodes.filter(
         (node): node is CalculationNode => node.type === "calculation"
       );
-      const parameterNodes = calculationNodes.filter(
-        (node) => node.paramDomainType
-      );
+      const parameterNodes = nodes.filter((node) => node.type === "parameter");
 
       // Log summary
       console.log("\n=== Data Summary ===");
