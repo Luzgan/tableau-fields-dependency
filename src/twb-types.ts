@@ -40,19 +40,48 @@ export interface TWBCalculation {
 }
 
 /**
+ * Member definition in TWB files
+ */
+interface TWBMember {
+  value: string;
+  alias?: string;
+}
+
+/**
+ * Members container in TWB files
+ */
+interface TWBMembers {
+  member: TWBMember[];
+}
+
+/**
+ * Parameter column in TWB files
+ */
+export interface TWBParameterColumn extends BaseTWBColumn {
+  "@_param-domain-type": "list" | "range";
+  members?: TWBMembers;
+  aliases?: {
+    alias: Array<{
+      key: string;
+      value: string;
+    }>;
+  };
+}
+
+/**
  * Calculation column in TWB files
  */
 export interface TWBCalculationColumn extends BaseTWBColumn {
-  // Optional for parameters
-  "@_param-domain-type"?: "list" | "range";
-  // Required for calculations
   calculation: TWBCalculation;
 }
 
 /**
  * Union type for any column in TWB files
  */
-export type TWBColumn = TWBRegularColumn | TWBCalculationColumn;
+export type TWBColumn =
+  | TWBRegularColumn
+  | TWBCalculationColumn
+  | TWBParameterColumn;
 
 /**
  * Datasource structure in TWB files
@@ -70,8 +99,14 @@ export interface TWBDatasource {
 export function isCalculationColumn(
   column: TWBColumn
 ): column is TWBCalculationColumn {
-  return !!(
-    (column as TWBCalculationColumn).calculation ||
-    (column as TWBCalculationColumn)["@_param-domain-type"]
-  );
+  return !!(column as TWBCalculationColumn).calculation;
+}
+
+/**
+ * Helper type guard to check if a column is a parameter
+ */
+export function isParameterColumn(
+  column: TWBColumn
+): column is TWBParameterColumn {
+  return !!(column as TWBParameterColumn)["@_param-domain-type"];
 }

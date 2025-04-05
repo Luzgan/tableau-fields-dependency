@@ -4,19 +4,22 @@ import {
   ThemeProvider,
   Typography,
   createTheme,
+  IconButton,
 } from "@mui/material";
+import { Clear } from "@mui/icons-material";
 import React, { useState } from "react";
 import { AppProvider, useAppContext } from "./AppContext";
 import FieldDetails from "./FieldDetails";
 import FieldsList from "./FieldsList";
 import FileUpload from "./FileUpload";
 import { Node } from "./types";
+import { NotificationProvider } from "./components/Notification";
 
 const theme = createTheme();
 
 function AppContent() {
   const [selectedField, setSelectedField] = useState<Node | null>(null);
-  const { fileData } = useAppContext();
+  const { fileData, setFileData } = useAppContext();
 
   const hasLoadedFile = fileData !== null;
 
@@ -33,22 +36,55 @@ function AppContent() {
         sx={{
           bgcolor: "primary.main",
           color: "primary.contrastText",
-          py: 1,
+          height: 48,
           width: "100%",
+          display: "flex",
+          alignItems: "center",
         }}
       >
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
-            px: 3,
+            px: 2,
             justifyContent: "space-between",
+            width: "100%",
           }}
         >
-          <Typography variant="h6" component="div">
+          <Typography variant="h6" component="div" sx={{ fontSize: "1.1rem" }}>
             Tableau Fields Dependency
           </Typography>
-          <FileUpload />
+          <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+            {hasLoadedFile && (
+              <>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "primary.contrastText",
+                    opacity: 0.9,
+                    mr: 1,
+                  }}
+                >
+                  {fileData.filename}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setFileData(null)}
+                  aria-label="Clear"
+                  sx={{
+                    color: "primary.contrastText",
+                    p: 0.5,
+                    "&:hover": {
+                      bgcolor: "rgba(255, 255, 255, 0.1)",
+                    },
+                  }}
+                >
+                  <Clear fontSize="small" />
+                </IconButton>
+              </>
+            )}
+            <FileUpload />
+          </Box>
         </Box>
       </Box>
       {hasLoadedFile ? (
@@ -99,15 +135,17 @@ function AppContent() {
   );
 }
 
-function App() {
+const App: React.FC = () => {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
-    </ThemeProvider>
+    <AppProvider>
+      <NotificationProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <AppContent />
+        </ThemeProvider>
+      </NotificationProvider>
+    </AppProvider>
   );
-}
+};
 
 export default App;

@@ -138,7 +138,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
                 }}
               >
                 <Box>
-                  <Typography>{refNode.name}</Typography>
+                  <Typography>{refNode.displayName}</Typography>
                   <Typography variant="caption" color="text.secondary">
                     {refNode.type}
                   </Typography>

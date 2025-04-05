@@ -28,6 +28,7 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
   const filterNodes = (nodes: Node[]) => {
     return nodes.filter((node) => {
       const matchesSearch =
+        node.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         node.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         node.caption?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         false;
@@ -83,6 +84,13 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
           <Box
             key={node.id}
             onClick={() => onFieldSelect(node)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                onFieldSelect(node);
+              }
+            }}
             sx={{
               p: 2,
               mb: 1,
@@ -94,7 +102,7 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
               },
             }}
           >
-            <Typography>{node.name}</Typography>
+            <Typography>{node.displayName}</Typography>
             <Typography variant="caption" color="text.secondary">
               {node.type}
             </Typography>

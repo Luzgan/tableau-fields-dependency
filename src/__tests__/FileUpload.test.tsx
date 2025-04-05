@@ -8,6 +8,7 @@ import {
   DataType,
   Node,
   Role,
+  ParameterNode,
 } from "../types";
 
 interface Column {
@@ -217,9 +218,11 @@ describe("TWB File Parsing", () => {
 
 // Test the actual parsing functions
 describe("Node Parsing", () => {
-  const getFieldType = (column: any): "column" | "calculation" => {
+  const getFieldType = (
+    column: any
+  ): "column" | "calculation" | "parameter" => {
     if (column?.["@_param-domain-type"]) {
-      return "calculation";
+      return "parameter";
     }
     if (column?.calculation) {
       return "calculation";
@@ -267,30 +270,41 @@ describe("Node Parsing", () => {
   const parseColumn = (column: Record<string, any>, index: number): Node => {
     const id = generateId("field", index);
     const type = getFieldType(column);
-    const formula =
-      type === "calculation" ? column?.calculation?.["@_formula"] : undefined;
-    const calculationClass =
-      type === "calculation" ? column?.calculation?.["@_class"] : undefined;
+    const name = column["@_name"] || "";
+    const caption = column["@_caption"];
+    const displayName = caption || name.replace(/[\[\]]/g, "");
 
     const baseNode = {
       id,
-      name: column["@_name"] || "",
+      name,
       type,
-      caption: column["@_caption"],
+      caption,
       dataType: parseDataType(column["@_datatype"]),
       role: column["@_role"] as Role,
+      displayName,
     };
 
-    if (type === "column") {
+    if (type === "parameter") {
+      const parameterNode: ParameterNode = {
+        ...baseNode,
+        type: "parameter",
+        paramDomainType: column["@_param-domain-type"] as "list" | "range",
+        members: column.members?.member?.map((m: any) => ({
+          value: m.value,
+          alias: m.alias,
+        })),
+      };
+      return parameterNode;
+    } else if (type === "column") {
       const columnNode: ColumnNode = {
         ...baseNode,
         type: "column",
-        aggregation: parseAggregation(column["@_aggregation"]),
+        aggregation: column["@_aggregation"] || undefined,
         defaultFormat: column["@_default-format"],
         precision: column["@_precision"]
           ? parseInt(column["@_precision"], 10)
           : undefined,
-        containsNull: column["@_contains-null"] === "true",
+        containsNull: column["@_contains-null"] === "true" ? true : undefined,
         ordinal: column["@_ordinal"]
           ? parseInt(column["@_ordinal"], 10)
           : undefined,
@@ -303,13 +317,9 @@ describe("Node Parsing", () => {
       const calculationNode: CalculationNode = {
         ...baseNode,
         type: "calculation",
-        formula: formula,
-        calculation: formula,
-        class: calculationClass as "tableau" | undefined,
-        paramDomainType: column["@_param-domain-type"] as
-          | "list"
-          | "range"
-          | undefined,
+        formula: column.calculation?.["@_formula"],
+        calculation: column.calculation?.["@_formula"],
+        class: column.calculation?.["@_class"] as "tableau" | undefined,
       };
       return calculationNode;
     }
@@ -427,16 +437,19 @@ describe("Node Parsing", () => {
         "@_role": "measure",
         "@_datatype": "integer",
         "@_param-domain-type": "range",
-        calculation: {
-          "@_class": "tableau",
-          "@_formula": "2023",
+        members: {
+          member: [
+            { value: "2021", alias: "2021" },
+            { value: "2022", alias: "2022" },
+            { value: "2023", alias: "2023" },
+          ],
         },
       };
 
       const result = parseColumn(sampleParamColumn, 0);
-      expect(result.type).toBe("calculation");
+      expect(result.type).toBe("parameter");
 
-      if (result.type === "calculation") {
+      if (result.type === "parameter") {
         // Test presence of all required fields
         expect(result).toHaveProperty("id");
         expect(result).toHaveProperty("name");
@@ -444,20 +457,27 @@ describe("Node Parsing", () => {
         expect(result).toHaveProperty("caption");
         expect(result).toHaveProperty("dataType");
         expect(result).toHaveProperty("role");
-        expect(result).toHaveProperty("formula");
-        expect(result).toHaveProperty("calculation");
         expect(result).toHaveProperty("paramDomainType");
+        expect(result).toHaveProperty("members");
 
         // Test specific field values
         expect(result.id).toBe("field-0");
         expect(result.name).toBe("Parameter_123");
-        expect(result.type).toBe("calculation");
+        expect(result.type).toBe("parameter");
         expect(result.caption).toBe("Year Parameter");
         expect(result.dataType).toBe("integer");
         expect(result.role).toBe("measure");
-        expect(result.formula).toBe("2023");
-        expect(result.calculation).toBe("2023");
         expect(result.paramDomainType).toBe("range");
+        expect(result.members).toEqual([
+          { value: "2021", alias: "2021" },
+          { value: "2022", alias: "2022" },
+          { value: "2023", alias: "2023" },
+        ]);
+
+        // Test that calculation-specific fields are not present
+        expect(result).not.toHaveProperty("formula");
+        expect(result).not.toHaveProperty("calculation");
+        expect(result).not.toHaveProperty("class");
 
         // Test that column-specific fields are not present
         expect(result).not.toHaveProperty("aggregation");
@@ -474,30 +494,61 @@ describe("Node Parsing", () => {
 
   test("parses regular column correctly", () => {
     const sampleColumn = {
-      "@_name": "Sales",
-      "@_caption": "Total Sales",
+      "@_caption": "Sales",
+      "@_datatype": "integer",
+      "@_name": "[Sales]",
       "@_role": "measure",
-      "@_datatype": "real",
-      "@_aggregation": "None",
-      "@_contains-null": "false",
     };
 
-    const result = parseColumn(sampleColumn, 0);
+    const result = parseColumn(sampleColumn, 1);
     expect(result).toEqual({
-      id: "field-0",
-      name: "Sales",
+      id: "field-1",
+      name: "[Sales]",
       type: "column",
-      caption: "Total Sales",
-      dataType: "real",
+      caption: "Sales",
+      dataType: "integer",
       role: "measure",
-      aggregation: "None",
-      containsNull: false,
+      aggregation: undefined,
       defaultFormat: undefined,
       precision: undefined,
+      containsNull: undefined,
       ordinal: undefined,
       remoteAlias: undefined,
-      remoteName: undefined,
-      remoteType: undefined,
+      displayName: "Sales",
+    });
+  });
+
+  test("parses parameter correctly", () => {
+    const sampleParam = {
+      "@_caption": "Date Range",
+      "@_datatype": "date",
+      "@_name": "[Parameter 1]",
+      "@_role": "measure",
+      "@_param-domain-type": "list",
+      members: {
+        member: [
+          { value: "2021", alias: "2021" },
+          { value: "2022", alias: "2022" },
+          { value: "2023", alias: "2023" },
+        ],
+      },
+    };
+
+    const result = parseColumn(sampleParam, 1);
+    expect(result).toEqual({
+      id: "field-1",
+      name: "[Parameter 1]",
+      type: "parameter",
+      caption: "Date Range",
+      dataType: "date",
+      role: "measure",
+      paramDomainType: "list",
+      displayName: "Date Range",
+      members: [
+        { value: "2021", alias: "2021" },
+        { value: "2022", alias: "2022" },
+        { value: "2023", alias: "2023" },
+      ],
     });
   });
 
@@ -521,6 +572,7 @@ describe("Node Parsing", () => {
       formula: "SUM([Sales]) / SUM([Target])",
       calculation: "SUM([Sales]) / SUM([Target])",
       class: "tableau",
+      displayName: "Sales vs Target",
     });
   });
 });

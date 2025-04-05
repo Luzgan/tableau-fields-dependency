@@ -81,7 +81,7 @@ const Graph: React.FC = () => {
         type: "custom",
         position: { x: 0, y: 0 },
         data: {
-          label: node.name,
+          label: node.displayName,
           type: node.type,
           caption: node.caption,
         },

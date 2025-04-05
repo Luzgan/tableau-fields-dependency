@@ -84,8 +84,16 @@ function BasicInfo({ field }: { field: Node }) {
         <Typography variant="subtitle2" color="text.secondary">
           Name
         </Typography>
-        <Typography>{field.name}</Typography>
+        <Typography>{field.displayName}</Typography>
       </Box>
+      {field.name !== field.displayName && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Internal Name
+          </Typography>
+          <Typography>{field.name}</Typography>
+        </Box>
+      )}
       {field.caption && (
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">

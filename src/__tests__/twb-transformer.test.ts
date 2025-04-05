@@ -35,7 +35,9 @@ describe("TWB Transformer", () => {
           expect(typeof node.id).toBe("string");
           expect(node.name).toBeDefined();
           expect(typeof node.name).toBe("string");
-          expect(node.type).toMatch(/^(column|calculation)$/);
+          expect(node.type).toMatch(/^(column|calculation|parameter)$/);
+          expect(node.displayName).toBeDefined();
+          expect(typeof node.displayName).toBe("string");
 
           // Optional but typed fields
           if (node.dataType) {
@@ -45,6 +47,18 @@ describe("TWB Transformer", () => {
           }
           if (node.role) {
             expect(["measure", "dimension"]).toContain(node.role);
+          }
+        });
+      });
+
+      test("displayName is correctly computed", () => {
+        Array.from(result.nodesById.values()).forEach((node) => {
+          if (node.caption) {
+            expect(node.displayName).toBe(node.caption);
+          } else if (node.name.startsWith("[") && node.name.endsWith("]")) {
+            expect(node.displayName).toBe(node.name.slice(1, -1));
+          } else {
+            expect(node.displayName).toBe(node.name);
           }
         });
       });

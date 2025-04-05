@@ -3,6 +3,7 @@ import {
   TWBCalculationColumn,
   TWBRegularColumn,
   isCalculationColumn,
+  isParameterColumn,
 } from "./twb-types";
 import {
   Node,
@@ -13,6 +14,7 @@ import {
   DataType,
   Role,
   AggregationType,
+  ParameterNode,
 } from "./types";
 
 /**
@@ -127,19 +129,39 @@ export function transformTWBData(
 
     columns.forEach((col) => {
       const id = generateNodeId(ds["@_name"], col["@_name"]);
+      const name = col["@_name"] || "";
+      const caption = col["@_caption"];
+      const displayName = caption || name.replace(/[\[\]]/g, "");
 
-      if (isCalculationColumn(col)) {
+      if (isParameterColumn(col)) {
+        // Create parameter node
+        const paramNode: ParameterNode = {
+          id,
+          name,
+          displayName,
+          type: "parameter",
+          caption,
+          dataType: mapDataType(col["@_datatype"]),
+          role: mapRole(col["@_role"]),
+          paramDomainType: col["@_param-domain-type"],
+          members: col.members?.member?.map((m: any) => ({
+            value: m.value,
+            alias: m.alias,
+          })),
+        };
+        nodesById.set(id, paramNode);
+      } else if (isCalculationColumn(col)) {
         // Create calculation node
         const calcNode: CalculationNode = {
           id,
-          name: col["@_name"],
+          name,
+          displayName,
           type: "calculation",
-          caption: col["@_caption"],
+          caption,
           dataType: mapDataType(col["@_datatype"]),
           role: mapRole(col["@_role"]),
           formula: col.calculation?.["@_formula"],
           calculation: col.calculation?.["@_formula"],
-          paramDomainType: col["@_param-domain-type"],
           class: col.calculation?.["@_class"] as "tableau" | undefined,
         };
         nodesById.set(id, calcNode);
@@ -161,9 +183,10 @@ export function transformTWBData(
         // Create column node
         const colNode: ColumnNode = {
           id,
-          name: col["@_name"],
+          name,
+          displayName,
           type: "column",
-          caption: col["@_caption"],
+          caption,
           dataType: mapDataType(col["@_datatype"]),
           role: mapRole(col["@_role"]),
           aggregation: mapAggregation(col["@_aggregation"]),

@@ -1,4 +1,4 @@
-export type NodeType = "column" | "calculation";
+export type NodeType = "column" | "calculation" | "parameter";
 
 export type DataType = "string" | "integer" | "real" | "date" | "boolean";
 export type AggregationType = "Sum" | "Count" | "Year" | "None";
@@ -12,6 +12,7 @@ interface BaseNode {
   description?: string;
   dataType?: DataType;
   role?: Role;
+  displayName: string;
 }
 
 export interface ColumnNode extends BaseNode {
@@ -26,6 +27,15 @@ export interface ColumnNode extends BaseNode {
   remoteType?: string;
 }
 
+export interface ParameterNode extends BaseNode {
+  type: "parameter";
+  paramDomainType: "list" | "range" | undefined;
+  members?: Array<{
+    value: string;
+    alias?: string;
+  }>;
+}
+
 export interface CalculationNode extends BaseNode {
   type: "calculation";
   formula?: string;
@@ -36,7 +46,7 @@ export interface CalculationNode extends BaseNode {
   aliases?: Record<string, string>;
 }
 
-export type Node = ColumnNode | CalculationNode;
+export type Node = ColumnNode | CalculationNode | ParameterNode;
 
 export interface Reference {
   sourceId: string;
