@@ -104,9 +104,6 @@ describe("TWB Transformer", () => {
           expect(node.type).toBe("calculation");
 
           // Optional but typed fields
-          if (node.formula) {
-            expect(typeof node.formula).toBe("string");
-          }
           if (node.calculation) {
             expect(typeof node.calculation).toBe("string");
           }
@@ -163,7 +160,7 @@ describe("TWB Transformer", () => {
           console.log("\nSample column node:", columnNodes[0]);
         }
         if (calculationNodes.length > 0) {
-          const calcSample = calculationNodes.find((n) => n.formula);
+          const calcSample = calculationNodes.find((n) => n.calculation);
           if (calcSample) {
             console.log("\nSample calculation node:", calcSample);
           }
@@ -245,6 +242,79 @@ describe("TWB Transformer", () => {
       expect(() => transformTWBData(datasources, "test.twb")).toThrow(
         "Role is required"
       );
+    });
+  });
+
+  describe("HTML Entity Decoding", () => {
+    it("should properly decode HTML entities in calculations", () => {
+      const datasources: TWBDatasource[] = [
+        {
+          "@_name": "test_ds",
+          column: [
+            {
+              "@_name": "[Test Calculation]",
+              "@_role": "measure",
+              "@_datatype": "string",
+              calculation: {
+                "@_class": "tableau",
+                "@_formula":
+                  'case [Role]&#13;&#10;when "D" then "AchievementAA"&#13;&#10;when "S" then "QCF AAA"&#13;&#10;when "T" then "QCF BAA"&#13;&#10;when "V" then "QCF Feedback receivedAA"&#13;&#10;when "Z" then "QCF Feedback providedAA"&#13;&#10;end',
+              },
+            },
+          ],
+        },
+      ];
+
+      const result = transformTWBData(datasources, "test.twb");
+      const nodes = Array.from(result.nodesById.values());
+      const calcNode = nodes.find((n) => n.name === "[Test Calculation]");
+
+      expect(calcNode).toBeDefined();
+      expect(calcNode?.type).toBe("calculation");
+      if (calcNode?.type === "calculation") {
+        const expectedFormula =
+          "case [Role]\r\n" +
+          'when "D" then "AchievementAA"\r\n' +
+          'when "S" then "QCF AAA"\r\n' +
+          'when "T" then "QCF BAA"\r\n' +
+          'when "V" then "QCF Feedback receivedAA"\r\n' +
+          'when "Z" then "QCF Feedback providedAA"\r\n' +
+          "end";
+
+        expect(calcNode.calculation).toBe(expectedFormula);
+      }
+    });
+
+    it("should handle other HTML entities in calculations", () => {
+      const datasources: TWBDatasource[] = [
+        {
+          "@_name": "test_ds",
+          column: [
+            {
+              "@_name": "[HTML Test]",
+              "@_role": "measure",
+              "@_datatype": "string",
+              calculation: {
+                "@_class": "tableau",
+                "@_formula":
+                  "IF [Value] &lt; 10 &amp;&amp; [Name] = &quot;Test&quot; THEN &apos;Yes&apos; END",
+              },
+            },
+          ],
+        },
+      ];
+
+      const result = transformTWBData(datasources, "test.twb");
+      const nodes = Array.from(result.nodesById.values());
+      const calcNode = nodes.find((n) => n.name === "[HTML Test]");
+
+      expect(calcNode).toBeDefined();
+      expect(calcNode?.type).toBe("calculation");
+      if (calcNode?.type === "calculation") {
+        expect(calcNode.calculation).toBe(
+          "IF [Value] < 10 && [Name] = \"Test\" THEN 'Yes' END"
+        );
+      }
     });
   });
 });

@@ -64,13 +64,37 @@ function mapAggregation(twbAggregation: string): AggregationType {
 }
 
 /**
+ * Decodes HTML entities in a string
+ */
+function decodeHtmlEntities(text: string): string {
+  if (!text) return text;
+
+  // First, handle combined entities like &#13;&#10;
+  text = text.replace(/&#13;&#10;/g, "\r\n");
+
+  // Then handle individual numeric entities
+  text = text.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
+
+  // Finally handle named entities
+  const entities: { [key: string]: string } = {
+    "&lt;": "<",
+    "&gt;": ">",
+    "&amp;": "&",
+    "&quot;": '"',
+    "&apos;": "'",
+  };
+
+  return text.replace(/&[a-z]+;/g, (match) => entities[match] || match);
+}
+
+/**
  * Cleans a calculation formula by removing comments
  */
 function cleanCalculation(formula: string): string {
   if (!formula) return formula;
 
-  // Remove single-line comments that end with &#13;&#10; (XML encoded newline)
-  const commentRegex = /\/\/.*?&#13;&#10;/gm;
+  // Remove single-line comments
+  const commentRegex = /\/\/.*?[\r\n]/gm;
   return formula.replace(commentRegex, "");
 }
 
@@ -156,6 +180,7 @@ export function transformTWBData(
         nodesById.set(id, paramNode);
       } else if (isCalculationColumn(col)) {
         // Create calculation node
+        const calculation = decodeHtmlEntities(col.calculation?.["@_formula"]);
         const calcNode: CalculationNode = {
           id,
           name,
@@ -164,15 +189,14 @@ export function transformTWBData(
           caption,
           dataType: mapDataType(col["@_datatype"]),
           role,
-          formula: col.calculation?.["@_formula"],
-          calculation: col.calculation?.["@_formula"],
+          calculation,
           class: col.calculation?.["@_class"] as "tableau" | undefined,
         };
         nodesById.set(id, calcNode);
 
-        // Extract references from formula
-        if (calcNode.formula) {
-          const fieldRefs = extractReferences(calcNode.formula);
+        // Extract references from calculation
+        if (calcNode.calculation) {
+          const fieldRefs = extractReferences(calcNode.calculation);
           fieldRefs.forEach((fieldName) => {
             referencedFields.add(fieldName);
             const ref: Reference = {

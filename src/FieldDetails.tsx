@@ -156,24 +156,6 @@ function BasicInfo({ field }: { field: Node }) {
       <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
         Calculation Properties
       </Typography>
-      {node.formula && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
-            Formula
-          </Typography>
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: "grey.100",
-              borderRadius: 1,
-              fontFamily: "monospace",
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            <Typography>{node.formula}</Typography>
-          </Box>
-        </Box>
-      )}
       {node.calculation && <Calculation calculation={node.calculation} />}
       {node.paramDomainType && (
         <Box sx={{ mb: 2 }}>

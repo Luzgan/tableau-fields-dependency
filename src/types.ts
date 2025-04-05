@@ -38,7 +38,6 @@ export interface ParameterNode extends BaseNode {
 
 export interface CalculationNode extends BaseNode {
   type: "calculation";
-  formula?: string;
   calculation?: string;
   paramDomainType?: "list" | "range";
   class?: "tableau";

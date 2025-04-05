@@ -317,7 +317,6 @@ describe("Node Parsing", () => {
       const calculationNode: CalculationNode = {
         ...baseNode,
         type: "calculation",
-        formula: column.calculation?.["@_formula"],
         calculation: column.calculation?.["@_formula"],
         class: column.calculation?.["@_class"] as "tableau" | undefined,
       };
@@ -401,7 +400,6 @@ describe("Node Parsing", () => {
         expect(result).toHaveProperty("caption");
         expect(result).toHaveProperty("dataType");
         expect(result).toHaveProperty("role");
-        expect(result).toHaveProperty("formula");
         expect(result).toHaveProperty("calculation");
 
         // Test specific field values
@@ -411,7 +409,6 @@ describe("Node Parsing", () => {
         expect(result.caption).toBe("Profit Ratio");
         expect(result.dataType).toBe("real");
         expect(result.role).toBe("measure");
-        expect(result.formula).toBe("[Profit]/[Sales]");
         expect(result.calculation).toBe("[Profit]/[Sales]");
 
         // Test calculation-specific fields
@@ -569,7 +566,6 @@ describe("Node Parsing", () => {
       caption: "Sales vs Target",
       dataType: undefined,
       role: undefined,
-      formula: "SUM([Sales]) / SUM([Target])",
       calculation: "SUM([Sales]) / SUM([Target])",
       class: "tableau",
       displayName: "Sales vs Target",
@@ -587,7 +583,7 @@ describe("Reference Creation", () => {
         id: "field-2",
         name: "Sales vs Target",
         type: "calculation",
-        formula: "SUM([Sales]) / SUM([Target])",
+        calculation: "SUM([Sales]) / SUM([Target])",
       },
     ];
 
@@ -599,8 +595,8 @@ describe("Reference Creation", () => {
     const calculations = nodes.filter((node) => node.type === "calculation");
 
     calculations.forEach((calc) => {
-      if (calc.formula) {
-        const matches = calc.formula.match(/\[([^\]]+)\]/g) || [];
+      if (calc.calculation) {
+        const matches = calc.calculation.match(/\[([^\]]+)\]/g) || [];
         matches.forEach((match) => {
           const fieldName = match.slice(1, -1);
           const targetNode = nodes.find((n) => n.name === fieldName);
