@@ -40,7 +40,10 @@ function mapDataType(twbType: string): DataType {
 /**
  * Maps TWB roles to our internal Role
  */
-function mapRole(twbRole: string): Role {
+function mapRole(twbRole: string | undefined): Role {
+  if (!twbRole) {
+    throw new Error("Role is required but was not provided");
+  }
   return twbRole.toLowerCase() === "measure" ? "measure" : "dimension";
 }
 
@@ -132,6 +135,7 @@ export function transformTWBData(
       const name = col["@_name"] || "";
       const caption = col["@_caption"];
       const displayName = caption || name.replace(/[\[\]]/g, "");
+      const role = mapRole(col["@_role"]); // Will throw if role is missing
 
       if (isParameterColumn(col)) {
         // Create parameter node
@@ -142,7 +146,7 @@ export function transformTWBData(
           type: "parameter",
           caption,
           dataType: mapDataType(col["@_datatype"]),
-          role: mapRole(col["@_role"]),
+          role,
           paramDomainType: col["@_param-domain-type"],
           members: col.members?.member?.map((m: any) => ({
             value: m.value,
@@ -159,7 +163,7 @@ export function transformTWBData(
           type: "calculation",
           caption,
           dataType: mapDataType(col["@_datatype"]),
-          role: mapRole(col["@_role"]),
+          role,
           formula: col.calculation?.["@_formula"],
           calculation: col.calculation?.["@_formula"],
           class: col.calculation?.["@_class"] as "tableau" | undefined,
@@ -173,7 +177,7 @@ export function transformTWBData(
             referencedFields.add(fieldName);
             const ref: Reference = {
               sourceId: id,
-              targetId: fieldName, // This will be updated in the second pass
+              targetId: fieldName,
               type: "direct",
             };
             references.push(ref);
@@ -188,7 +192,7 @@ export function transformTWBData(
           type: "column",
           caption,
           dataType: mapDataType(col["@_datatype"]),
-          role: mapRole(col["@_role"]),
+          role,
           aggregation: mapAggregation(col["@_aggregation"]),
           defaultFormat: col["@_default-format"],
           precision: col["@_precision"]

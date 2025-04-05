@@ -11,7 +11,7 @@ interface BaseNode {
   caption?: string;
   description?: string;
   dataType?: DataType;
-  role?: Role;
+  role: Role;
   displayName: string;
 }
 

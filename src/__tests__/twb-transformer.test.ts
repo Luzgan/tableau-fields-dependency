@@ -3,6 +3,12 @@ import path from "path";
 import { parseTWB } from "../twb-parser";
 import { transformTWBData } from "../twb-transformer";
 import { ColumnNode, CalculationNode } from "../types";
+import {
+  TWBDatasource,
+  TWBCalculationColumn,
+  TWBRegularColumn,
+  TWBParameterColumn,
+} from "../twb-types";
 
 const TEST_FILES = [
   "test_book.twb",
@@ -166,6 +172,79 @@ describe("TWB Transformer", () => {
           console.log("\nSample parameter node:", parameterNodes[0]);
         }
       });
+    });
+  });
+
+  describe("Role handling", () => {
+    test("all nodes have a role", () => {
+      const datasources: TWBDatasource[] = [
+        {
+          "@_name": "test",
+          column: [
+            {
+              "@_name": "col1",
+              "@_datatype": "string",
+              "@_role": "dimension",
+              "@_aggregation": "None",
+            } as TWBRegularColumn,
+            {
+              "@_name": "col2",
+              "@_datatype": "real",
+              "@_role": "measure",
+              calculation: {
+                "@_class": "tableau",
+                "@_formula": "[col1] * 2",
+              },
+            } as TWBCalculationColumn,
+            {
+              "@_name": "param1",
+              "@_datatype": "integer",
+              "@_role": "measure",
+              "@_param-domain-type": "list",
+              members: {
+                member: [{ value: "1" }, { value: "2" }],
+              },
+            } as TWBParameterColumn,
+          ],
+        },
+      ];
+
+      const result = transformTWBData(datasources, "test.twb");
+      const nodes = Array.from(result.nodesById.values());
+
+      // Verify each node has a role
+      nodes.forEach((node) => {
+        expect(node.role).toBeDefined();
+        expect(["measure", "dimension"]).toContain(node.role);
+      });
+
+      // Verify specific roles
+      const col1 = nodes.find((n) => n.name === "col1");
+      const col2 = nodes.find((n) => n.name === "col2");
+      const param1 = nodes.find((n) => n.name === "param1");
+
+      expect(col1?.role).toBe("dimension");
+      expect(col2?.role).toBe("measure");
+      expect(param1?.role).toBe("measure");
+    });
+
+    test("throws error when role is missing", () => {
+      const datasources: TWBDatasource[] = [
+        {
+          "@_name": "test",
+          column: [
+            {
+              "@_name": "col1",
+              "@_datatype": "string",
+              "@_aggregation": "None",
+            } as TWBRegularColumn,
+          ],
+        },
+      ];
+
+      expect(() => transformTWBData(datasources, "test.twb")).toThrow(
+        "Role is required"
+      );
     });
   });
 });

@@ -7,6 +7,7 @@ import {
   IconButton,
   Collapse,
   Tooltip,
+  Chip,
 } from "@mui/material";
 import {
   TableChart as ColumnIcon,
@@ -25,18 +26,27 @@ interface FieldsListProps {
 const nodeTypeConfig = {
   column: {
     icon: ColumnIcon,
-    color: "#1976d2", // blue
-    label: "Columns",
+    color: "#9c27b0", // purple for columns
+    label: "Data source fields",
   },
   calculation: {
     icon: CalculationIcon,
-    color: "#2e7d32", // green
-    label: "Calculations",
+    color: "#d32f2f", // red for calculations
+    label: "Calculated fields",
   },
   parameter: {
     icon: ParameterIcon,
-    color: "#ed6c02", // orange
+    color: "#f57c00", // orange for parameters
     label: "Parameters",
+  },
+};
+
+const roleConfig = {
+  measure: {
+    color: "#2e7d32", // green (Tableau's measure color)
+  },
+  dimension: {
+    color: "#1976d2", // blue (Tableau's dimension color)
   },
 };
 
@@ -49,6 +59,10 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
     "calculation",
     "parameter",
   ]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([
+    "measure",
+    "dimension",
+  ]);
 
   const nodes = helpers.getNodes();
 
@@ -60,7 +74,8 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
         node.caption?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         false;
       const matchesType = selectedTypes.includes(node.type);
-      return matchesSearch && matchesType;
+      const matchesRole = selectedRoles.includes(node.role);
+      return matchesSearch && matchesType && matchesRole;
     });
   };
 
@@ -71,6 +86,16 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
     // Ensure at least one type is selected
     if (newTypes.length > 0) {
       setSelectedTypes(newTypes);
+    }
+  };
+
+  const handleRoleChange = (
+    _event: React.MouseEvent<HTMLElement>,
+    newRoles: string[]
+  ) => {
+    // Ensure at least one role is selected
+    if (newRoles.length > 0) {
+      setSelectedRoles(newRoles);
     }
   };
 
@@ -107,6 +132,9 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
           </Tooltip>
         </Box>
         <Collapse in={showFilters}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
+            Types
+          </Typography>
           <ToggleButtonGroup
             value={selectedTypes}
             onChange={handleTypeChange}
@@ -155,6 +183,60 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
               );
             })}
           </ToggleButtonGroup>
+
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
+            Roles
+          </Typography>
+          <ToggleButtonGroup
+            value={selectedRoles}
+            onChange={handleRoleChange}
+            aria-label="field roles"
+            size="small"
+            orientation="vertical"
+            sx={{
+              width: "100%",
+              mb: 2,
+              "& .MuiToggleButton-root": {
+                textTransform: "none",
+                justifyContent: "flex-start",
+                px: 1.5,
+                py: 0.7,
+                borderRadius: "4px !important",
+                border: "none !important",
+                mb: 0.5,
+                "&:not(:first-of-type)": {
+                  borderRadius: "4px !important",
+                },
+              },
+            }}
+          >
+            {Object.entries(roleConfig).map(([role, config]) => (
+              <ToggleButton
+                key={role}
+                value={role}
+                aria-label={role}
+                sx={{
+                  backgroundColor: `${config.color}10 !important`,
+                  "&.Mui-selected": {
+                    backgroundColor: `${config.color}20 !important`,
+                    color: `${config.color} !important`,
+                  },
+                  "&:hover": {
+                    backgroundColor: `${config.color}30 !important`,
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    textTransform: "capitalize",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {role}
+                </Typography>
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
         </Collapse>
       </Box>
       <Box sx={{ flex: 1, overflow: "auto", px: 2 }}>
@@ -183,21 +265,41 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
                 },
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <Icon sx={{ color: config.color, mr: 1, fontSize: "1.2rem" }} />
                 <Typography>{node.displayName}</Typography>
               </Box>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: config.color,
-                  display: "flex",
-                  alignItems: "center",
-                  ml: 3.2, // To align with the text above
-                }}
-              >
-                {node.type}
-              </Typography>
+              <Box sx={{ display: "flex", gap: 1, ml: 3.2 }}>
+                <Chip
+                  size="small"
+                  label={
+                    node.type === "column"
+                      ? "Data source field"
+                      : node.type === "calculation"
+                      ? "Calculated field"
+                      : "Parameter"
+                  }
+                  sx={{
+                    backgroundColor: `${config.color}20`,
+                    color: config.color,
+                    fontWeight: 500,
+                    fontSize: "0.75rem",
+                  }}
+                />
+                <Chip
+                  size="small"
+                  label={node.role}
+                  sx={{
+                    backgroundColor: `${
+                      roleConfig[node.role]?.color || "#757575"
+                    }20`,
+                    color: roleConfig[node.role]?.color || "#757575",
+                    fontWeight: 500,
+                    fontSize: "0.75rem",
+                    textTransform: "capitalize",
+                  }}
+                />
+              </Box>
             </Box>
           );
         })}

@@ -2,7 +2,7 @@ import { Box, Paper, Tab, Tabs, Typography } from "@mui/material";
 import React, { useState } from "react";
 import { useAppContext } from "./AppContext";
 import ReferencesList from "./ReferencesList";
-import { CalculationNode, ColumnNode, Node } from "./types";
+import { CalculationNode, ColumnNode, Node, ParameterNode } from "./types";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -44,18 +44,13 @@ function a11yProps(index: number) {
 function BasicInfo({ field }: { field: Node }) {
   const renderColumnSpecificInfo = (node: ColumnNode) => (
     <>
-      {node.role && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
-            Role
-          </Typography>
-          <Typography>{node.role}</Typography>
-        </Box>
-      )}
+      <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+        Data Source Properties
+      </Typography>
       {node.aggregation && (
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">
-            Aggregation
+            Default Aggregation
           </Typography>
           <Typography>{node.aggregation}</Typography>
         </Box>
@@ -68,11 +63,147 @@ function BasicInfo({ field }: { field: Node }) {
           <Typography>{node.defaultFormat}</Typography>
         </Box>
       )}
+      {node.precision !== undefined && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Precision
+          </Typography>
+          <Typography>{node.precision}</Typography>
+        </Box>
+      )}
+      {node.containsNull !== undefined && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Can Contain Null Values
+          </Typography>
+          <Typography>{node.containsNull ? "Yes" : "No"}</Typography>
+        </Box>
+      )}
+      {(node.remoteAlias || node.remoteName || node.remoteType) && (
+        <>
+          <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+            Remote Source Details
+          </Typography>
+          {node.remoteAlias && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Remote Alias
+              </Typography>
+              <Typography>{node.remoteAlias}</Typography>
+            </Box>
+          )}
+          {node.remoteName && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Remote Name
+              </Typography>
+              <Typography>{node.remoteName}</Typography>
+            </Box>
+          )}
+          {node.remoteType && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Remote Type
+              </Typography>
+              <Typography>{node.remoteType}</Typography>
+            </Box>
+          )}
+        </>
+      )}
+    </>
+  );
+
+  const renderParameterSpecificInfo = (node: ParameterNode) => (
+    <>
+      <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+        Parameter Properties
+      </Typography>
+      {node.paramDomainType && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Domain Type
+          </Typography>
+          <Typography sx={{ textTransform: "capitalize" }}>
+            {node.paramDomainType}
+          </Typography>
+        </Box>
+      )}
+      {node.members && node.members.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Allowed Values
+          </Typography>
+          <Box sx={{ pl: 2 }}>
+            {node.members.map(
+              (member: { value: string; alias?: string }, index: number) => (
+                <Box key={index} sx={{ mb: 0.5 }}>
+                  <Typography>
+                    {member.alias
+                      ? `${member.alias} (${member.value})`
+                      : member.value}
+                  </Typography>
+                </Box>
+              )
+            )}
+          </Box>
+        </Box>
+      )}
     </>
   );
 
   const renderCalculationSpecificInfo = (node: CalculationNode) => (
-    <>{node.calculation && <Calculation calculation={node.calculation} />}</>
+    <>
+      <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+        Calculation Properties
+      </Typography>
+      {node.formula && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Formula
+          </Typography>
+          <Box
+            sx={{
+              p: 2,
+              backgroundColor: "grey.100",
+              borderRadius: 1,
+              fontFamily: "monospace",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            <Typography>{node.formula}</Typography>
+          </Box>
+        </Box>
+      )}
+      {node.calculation && <Calculation calculation={node.calculation} />}
+      {node.paramDomainType && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Domain Type
+          </Typography>
+          <Typography sx={{ textTransform: "capitalize" }}>
+            {node.paramDomainType}
+          </Typography>
+        </Box>
+      )}
+      {node.members && node.members.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Members
+          </Typography>
+          <Box sx={{ pl: 2 }}>
+            {node.members.map((member, index) => (
+              <Box key={index} sx={{ mb: 0.5 }}>
+                <Typography>
+                  {node.aliases?.[member]
+                    ? `${node.aliases[member]} (${member})`
+                    : member}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      )}
+    </>
   );
 
   return (
@@ -91,7 +222,18 @@ function BasicInfo({ field }: { field: Node }) {
           <Typography variant="subtitle2" color="text.secondary">
             Internal Name
           </Typography>
-          <Typography>{field.name}</Typography>
+          <Typography
+            sx={{
+              fontFamily: "monospace",
+              backgroundColor: "grey.100",
+              px: 1,
+              py: 0.5,
+              borderRadius: 0.5,
+              display: "inline-block",
+            }}
+          >
+            {field.name}
+          </Typography>
         </Box>
       )}
       {field.caption && (
@@ -106,14 +248,30 @@ function BasicInfo({ field }: { field: Node }) {
         <Typography variant="subtitle2" color="text.secondary">
           Type
         </Typography>
-        <Typography>{field.type}</Typography>
+        <Typography>
+          {field.type === "column"
+            ? "Data source field"
+            : field.type === "calculation"
+            ? "Calculated field"
+            : "Parameter"}
+        </Typography>
+      </Box>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle2" color="text.secondary">
+          Role
+        </Typography>
+        <Typography sx={{ textTransform: "capitalize" }}>
+          {field.role}
+        </Typography>
       </Box>
       {field.dataType && (
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">
             Data Type
           </Typography>
-          <Typography>{field.dataType}</Typography>
+          <Typography sx={{ textTransform: "capitalize" }}>
+            {field.dataType}
+          </Typography>
         </Box>
       )}
       {field.description && (
@@ -124,15 +282,9 @@ function BasicInfo({ field }: { field: Node }) {
           <Typography>{field.description}</Typography>
         </Box>
       )}
-      {field.type === "calculation" && (field as CalculationNode).formula && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
-            Formula
-          </Typography>
-          <Typography>{(field as CalculationNode).formula}</Typography>
-        </Box>
-      )}
       {field.type === "column" && renderColumnSpecificInfo(field as ColumnNode)}
+      {field.type === "parameter" &&
+        renderParameterSpecificInfo(field as ParameterNode)}
       {field.type === "calculation" &&
         renderCalculationSpecificInfo(field as CalculationNode)}
     </Box>
