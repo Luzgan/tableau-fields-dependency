@@ -1,158 +1,74 @@
 import { Upload } from "@mui/icons-material";
-import { Box, Button, Typography } from "@mui/material";
-import React, { useRef } from "react";
+import { Box, Button, Typography, Alert } from "@mui/material";
+import React, { useRef, useState } from "react";
 import { useAppContext } from "./AppContext";
-import {
-  AggregationType,
-  DataType,
-  FileData,
-  Node,
-  Reference,
-  Role,
-} from "./types";
+import { FileData } from "./types";
+import { parseTWB } from "./twb-parser";
+import { transformTWBData } from "./twb-transformer";
 
 const FileUpload: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { fileData, setFileData } = useAppContext();
-
-  const parseDataType = (type: string): DataType | undefined => {
-    switch (type.toLowerCase()) {
-      case "string":
-      case "wstr":
-        return "string";
-      case "integer":
-      case "i8":
-        return "integer";
-      case "real":
-      case "r8":
-        return "real";
-      case "date":
-        return "date";
-      case "boolean":
-        return "boolean";
-      default:
-        return undefined;
-    }
-  };
-
-  const parseAggregation = (agg: string): AggregationType => {
-    switch (agg.toLowerCase()) {
-      case "sum":
-        return "Sum";
-      case "count":
-        return "Count";
-      case "year":
-        return "Year";
-      default:
-        return "None";
-    }
-  };
+  const [error, setError] = useState<string | null>(null);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target?.result as string;
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(text, "text/xml");
+    // Clear previous error
+    setError(null);
 
-      const nodes: Node[] = [];
-      const references: Reference[] = [];
+    try {
+      console.log("\n=== Processing TWB File ===");
+      console.log("File name:", file.name);
 
-      // Parse columns
-      const columns = xmlDoc.querySelectorAll("column");
-      columns.forEach((column: Element) => {
-        const node: Node = {
-          id: column.getAttribute("name") || "",
-          name:
-            column.getAttribute("caption") || column.getAttribute("name") || "",
-          type: "column",
-          caption: column.getAttribute("caption") || undefined,
-          dataType: parseDataType(column.getAttribute("datatype") || ""),
-          role: (column.getAttribute("role") as Role) || undefined,
-          aggregation: parseAggregation(
-            column.getAttribute("aggregation") || ""
-          ),
-          defaultFormat: column.getAttribute("default-format") || undefined,
-          precision: column.getAttribute("precision")
-            ? parseInt(column.getAttribute("precision") || "0", 10)
-            : undefined,
-          containsNull: column.getAttribute("contains-null") === "true",
-          ordinal: column.getAttribute("ordinal")
-            ? parseInt(column.getAttribute("ordinal") || "0", 10)
-            : undefined,
-          remoteAlias: column.getAttribute("remote-alias") || undefined,
-          remoteName: column.getAttribute("remote-name") || undefined,
-          remoteType: column.getAttribute("remote-type") || undefined,
-        };
-        nodes.push(node);
-      });
+      // Parse TWB file
+      const datasources = await parseTWB(file);
+      console.log(`Number of datasources: ${datasources.length}`);
 
-      // Parse calculations
-      const calculations = xmlDoc.querySelectorAll("calculation");
-      calculations.forEach((calc: Element) => {
-        const node: Node = {
-          id: calc.getAttribute("name") || "",
-          name: calc.getAttribute("caption") || calc.getAttribute("name") || "",
-          type: "calculation",
-          caption: calc.getAttribute("caption") || undefined,
-          formula: calc.getAttribute("formula") || undefined,
-          calculation: calc.textContent || undefined,
-          class: calc.getAttribute("class") as "tableau" | undefined,
-          paramDomainType: calc.getAttribute("param-domain-type") as
-            | "list"
-            | "range"
-            | undefined,
-        };
+      // Transform into our internal format
+      const transformedData = transformTWBData(datasources, file.name);
 
-        // Parse members if present
-        const members = calc.querySelectorAll("members > member");
-        if (members.length > 0) {
-          node.members = Array.from(members).map(
-            (member) => member.getAttribute("value") || ""
-          );
-        }
+      // Log summary
+      const nodes = Array.from(transformedData.nodesById.values());
+      const columnNodes = nodes.filter((node) => node.type === "column");
+      const calculationNodes = nodes.filter(
+        (node) => node.type === "calculation"
+      );
+      const parameterNodes = calculationNodes.filter(
+        (node) => "paramDomainType" in node && node.paramDomainType
+      );
 
-        // Parse aliases if present
-        const aliases = calc.querySelectorAll("aliases > alias");
-        if (aliases.length > 0) {
-          node.aliases = {};
-          aliases.forEach((alias) => {
-            const key = alias.getAttribute("key") || "";
-            const value = alias.getAttribute("value") || "";
-            if (node.aliases && key && value) {
-              node.aliases[key] = value;
-            }
-          });
-        }
+      console.log("\n=== File Analysis Summary ===");
+      console.log(`Total nodes: ${nodes.length}`);
+      console.log(`Column nodes: ${columnNodes.length}`);
+      console.log(`Calculation nodes: ${calculationNodes.length}`);
+      console.log(`Parameter nodes: ${parameterNodes.length}`);
+      console.log(`Total references: ${transformedData.references.length}`);
+      console.log(
+        `Direct references: ${
+          transformedData.references.filter((ref) => ref.type === "direct")
+            .length
+        }`
+      );
+      console.log(
+        `Indirect references: ${
+          transformedData.references.filter((ref) => ref.type === "indirect")
+            .length
+        }`
+      );
 
-        nodes.push(node);
-
-        // Parse references
-        const formula = calc.getAttribute("formula") || "";
-        const referencedFields = formula.match(/\[([^\]]+)\]/g) || [];
-        referencedFields.forEach((field) => {
-          const fieldName = field.slice(1, -1);
-          references.push({
-            sourceId: node.id,
-            targetId: fieldName,
-            type: "direct",
-          });
-        });
-      });
-
-      const nodesById = new Map(nodes.map((node) => [node.id, node]));
-
-      setFileData({
-        filename: file.name,
-        nodesById,
-        references,
-      });
-    };
-
-    reader.readAsText(file);
+      // Update app state
+      setFileData(transformedData);
+    } catch (error) {
+      console.error("Error processing TWB file:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred while processing the file"
+      );
+      setFileData(null);
+    }
   };
 
   const handleUploadClick = () => {
@@ -160,36 +76,47 @@ const FileUpload: React.FC = () => {
   };
 
   return (
-    <>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 2,
+        p: 3,
+        width: "100%",
+        maxWidth: 600,
+      }}
+    >
       <input
         type="file"
         ref={fileInputRef}
         onChange={onFileChange}
-        style={{ display: "none" }}
         accept=".twb"
+        style={{ display: "none" }}
       />
-      <Box sx={{ display: "flex", alignItems: "center" }}>
-        {fileData && (
-          <Typography variant="body2" sx={{ mr: 2, color: "inherit" }}>
-            {fileData.filename}
+      <Button
+        variant="contained"
+        onClick={handleUploadClick}
+        startIcon={<Upload />}
+        sx={{ minWidth: 200 }}
+      >
+        Upload TWB File
+      </Button>
+      {error && (
+        <Alert severity="error" sx={{ width: "100%" }}>
+          {error}
+        </Alert>
+      )}
+      {fileData && !error && (
+        <Alert severity="success" sx={{ width: "100%" }}>
+          Successfully loaded: {fileData.filename}
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Found {fileData.nodesById.size} nodes and{" "}
+            {fileData.references.length} references
           </Typography>
-        )}
-        <Button
-          variant="contained"
-          onClick={handleUploadClick}
-          startIcon={<Upload />}
-          size="small"
-          sx={{
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
-            },
-          }}
-        >
-          Upload Tableau Workbook
-        </Button>
-      </Box>
-    </>
+        </Alert>
+      )}
+    </Box>
   );
 };
 

@@ -7,6 +7,8 @@ import ReactFlow, {
   NodeTypes,
   useEdgesState,
   useNodesState,
+  Handle,
+  Position,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { useAppContext } from "./AppContext";
@@ -15,9 +17,42 @@ import { Node, Reference } from "./types";
 interface NodeData {
   label: string;
   type: string;
+  caption?: string;
 }
 
-const nodeTypes: NodeTypes = {};
+const CustomNode = ({ data }: { data: NodeData }) => (
+  <div
+    style={{
+      padding: "10px",
+      borderRadius: "5px",
+      background: data.type === "column" ? "#e3f2fd" : "#fff3e0",
+      border: "1px solid",
+      borderColor: data.type === "column" ? "#90caf9" : "#ffb74d",
+      minWidth: "150px",
+    }}
+  >
+    <Handle type="target" position={Position.Top} />
+    <div style={{ fontWeight: "bold" }}>{data.label}</div>
+    {data.caption && (
+      <div style={{ fontSize: "0.8em", color: "#666" }}>{data.caption}</div>
+    )}
+    <div
+      style={{
+        fontSize: "0.8em",
+        color: "#666",
+        fontStyle: "italic",
+        marginTop: "4px",
+      }}
+    >
+      {data.type}
+    </div>
+    <Handle type="source" position={Position.Bottom} />
+  </div>
+);
+
+const nodeTypes: NodeTypes = {
+  custom: CustomNode,
+};
 
 const Graph: React.FC = () => {
   const { fileData, helpers } = useAppContext();
@@ -43,10 +78,12 @@ const Graph: React.FC = () => {
 
       const flowNode: FlowNode<NodeData> = {
         id: node.id,
+        type: "custom",
         position: { x: 0, y: 0 },
         data: {
           label: node.name,
           type: node.type,
+          caption: node.caption,
         },
       };
 
@@ -73,6 +110,11 @@ const Graph: React.FC = () => {
               id: `${ref.sourceId}-${ref.targetId}`,
               source: ref.sourceId,
               target: ref.targetId,
+              style: {
+                stroke: ref.type === "direct" ? "#4caf50" : "#ff9800",
+                strokeWidth: 2,
+              },
+              animated: ref.type === "indirect",
             },
             ...childResult.edges
           );
@@ -106,8 +148,8 @@ const Graph: React.FC = () => {
     const nodesPerRow = Math.ceil(Math.sqrt(result.nodes.length));
     result.nodes.forEach((node, index) => {
       node.position = {
-        x: (index % nodesPerRow) * 200,
-        y: Math.floor(index / nodesPerRow) * 100,
+        x: (index % nodesPerRow) * 250,
+        y: Math.floor(index / nodesPerRow) * 150,
       };
     });
 
@@ -128,9 +170,15 @@ const Graph: React.FC = () => {
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
+        minZoom={0.1}
+        maxZoom={1.5}
+        defaultEdgeOptions={{
+          type: "smoothstep",
+          style: { strokeWidth: 2 },
+        }}
       >
         <Controls />
-        <Background />
+        <Background color="#aaa" gap={16} />
       </ReactFlow>
     </div>
   );

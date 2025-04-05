@@ -21,19 +21,23 @@ function TabPanel(props: TabPanelProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
+      id={`field-details-tabpanel-${index}`}
+      aria-labelledby={`field-details-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && (
+        <Box key={`field-details-content-${index}`} sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
     </div>
   );
 }
 
 function a11yProps(index: number) {
   return {
-    id: `simple-tab-${index}`,
-    "aria-controls": `simple-tabpanel-${index}`,
+    id: `field-details-tab-${index}`,
+    "aria-controls": `field-details-tabpanel-${index}`,
   };
 }
 
@@ -112,16 +116,17 @@ function BasicInfo({ field }: { field: Node }) {
           <Typography>{field.description}</Typography>
         </Box>
       )}
-      {field.formula && (
+      {field.type === "calculation" && (field as CalculationNode).formula && (
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">
             Formula
           </Typography>
-          <Typography>{field.formula}</Typography>
+          <Typography>{(field as CalculationNode).formula}</Typography>
         </Box>
       )}
-      {field.type === "column" && renderColumnSpecificInfo(field)}
-      {field.type === "calculation" && renderCalculationSpecificInfo(field)}
+      {field.type === "column" && renderColumnSpecificInfo(field as ColumnNode)}
+      {field.type === "calculation" &&
+        renderCalculationSpecificInfo(field as CalculationNode)}
     </Box>
   );
 }
