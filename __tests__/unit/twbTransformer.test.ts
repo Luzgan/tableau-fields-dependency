@@ -1,14 +1,14 @@
 import fs from "fs";
 import path from "path";
-import { parseTWB } from "../twb-parser";
-import { transformTWBData } from "../twb-transformer";
-import { ColumnNode, CalculationNode } from "../types";
+import { parseTWB } from "../../src/utils/twbParser";
+import { transformTWBData } from "../../src/utils/twbTransformer";
+import { ColumnNode, CalculationNode } from "../../src/types/app.types";
 import {
   TWBDatasource,
-  TWBCalculationColumn,
   TWBRegularColumn,
+  TWBCalculationColumn,
   TWBParameterColumn,
-} from "../twb-types";
+} from "../../src/types/twb.types";
 
 const TEST_FILES = [
   "test_book.twb",

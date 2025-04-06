@@ -17,7 +17,12 @@ import {
 } from "react-router-dom";
 import { useAppContext } from "./AppContext";
 import ReferencesList from "./ReferencesList";
-import { CalculationNode, ColumnNode, Node, ParameterNode } from "./types";
+import {
+  CalculationNode,
+  ColumnNode,
+  Node,
+  ParameterNode,
+} from "../types/app.types";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 

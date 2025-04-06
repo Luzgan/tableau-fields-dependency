@@ -1,11 +1,11 @@
 import fs from "fs";
 import path from "path";
-import { parseTWB } from "../twb-parser";
+import { parseTWB } from "../../src/utils/twbParser";
 import {
-  TWBCalculationColumn,
   TWBRegularColumn,
+  TWBCalculationColumn,
   isCalculationColumn,
-} from "../twb-types";
+} from "../../src/types/twb.types";
 
 const TEST_FILES = [
   "test_book.twb",

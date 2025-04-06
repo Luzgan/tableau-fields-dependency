@@ -1,21 +1,17 @@
 import {
   TWBDatasource,
-  TWBCalculationColumn,
-  TWBRegularColumn,
   isCalculationColumn,
   isParameterColumn,
-} from "./twb-types";
+} from "../types/twb.types";
 import {
+  FileData,
   Node,
   ColumnNode,
   CalculationNode,
-  Reference,
-  FileData,
-  DataType,
-  Role,
-  AggregationType,
   ParameterNode,
-} from "./types";
+  Reference,
+} from "../types/app.types";
+import { DataType, Role, AggregationType } from "../types";
 
 /**
  * Maps TWB data types to our internal DataType

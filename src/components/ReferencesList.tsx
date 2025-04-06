@@ -2,7 +2,7 @@ import { Box, Tab, Tabs, Typography } from "@mui/material";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "./AppContext";
-import { Node, Reference } from "./types";
+import { Node, Reference } from "../types/app.types";
 
 interface TabPanelProps {
   children?: React.ReactNode;

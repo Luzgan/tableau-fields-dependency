@@ -18,7 +18,7 @@ import {
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "./AppContext";
-import { Node, NodeType } from "./types";
+import { Node, NodeType } from "../types/app.types";
 
 const nodeTypeConfig = {
   column: {

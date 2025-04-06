@@ -9,7 +9,7 @@ import {
   Node,
   Role,
   ParameterNode,
-} from "../types";
+} from "../../src/types/app.types";
 
 interface Column {
   "@_name"?: string;
@@ -20,11 +20,6 @@ interface Column {
     "@_class"?: string;
     "@_formula"?: string;
   };
-}
-
-interface Datasource {
-  "@_name"?: string;
-  column?: Column | Column[];
 }
 
 const parser = new XMLParser({

@@ -3,7 +3,7 @@ import {
   TWBRegularColumn,
   TWBCalculationColumn,
   TWBParameterColumn,
-} from "./twb-types";
+} from "../types/twb.types";
 import { XMLParser } from "fast-xml-parser";
 
 // Configure parser with the same options as in FileUpload.tsx

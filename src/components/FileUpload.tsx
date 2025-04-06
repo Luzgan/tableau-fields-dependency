@@ -3,10 +3,10 @@ import { Box, Button } from "@mui/material";
 import React, { RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "./AppContext";
-import { useNotification } from "./components/Notification";
-import { FileData, ColumnNode, CalculationNode } from "./types";
-import { parseTWB } from "./twb-parser";
-import { transformTWBData } from "./twb-transformer";
+import { useNotification } from "./Notification";
+import { FileData, ColumnNode, CalculationNode } from "../types/app.types";
+import { parseTWB } from "../utils/twbParser";
+import { transformTWBData } from "../utils/twbTransformer";
 
 interface FileUploadProps {
   fileInputRef: RefObject<HTMLInputElement>;

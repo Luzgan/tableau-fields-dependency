@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
-import { FileData, Node, Reference } from "./types";
+import { FileData, Node, Reference } from "../types/app.types";
 
 interface AppContextType {
   fileData: FileData | null;

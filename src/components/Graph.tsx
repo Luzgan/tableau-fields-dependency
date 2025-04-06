@@ -12,7 +12,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { useAppContext } from "./AppContext";
-import { Node, Reference } from "./types";
+import { Node, Reference } from "../types/app.types";
 
 interface NodeData {
   label: string;
