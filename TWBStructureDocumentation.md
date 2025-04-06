@@ -69,7 +69,59 @@ A Tableau workbook file follows this XML structure:
 1. `<repository-location>` - Information about workbook location in repository
 2. `<style>` - Workbook style definitions
 
+## Column Types
+
+Tableau workbooks contain several types of columns:
+
+1. **Data Source Fields** - Regular columns from the data source
+
+   - Have source metadata (`remote-name`, `remote-type`, etc.)
+   - Always have an aggregation type
+
+2. **Calculated Fields** - User-defined calculations
+
+   - Have a calculation formula
+   - No source metadata
+
+3. **Parameters** - User-configurable values
+
+   - Have domain type (list or range)
+   - Can have members or range bounds
+
+4. **Internal Columns** - Used by Tableau internally
+   - Names always start with `[__tableau_internal_object_id__]`
+   - Have datatype "table"
+   - Used for internal object tracking
+   - Should be ignored for field dependency analysis
+
 ## Recognition Rules
+
+### How to Identify Internal Columns
+
+1. Name Pattern:
+
+   - Always starts with `[__tableau_internal_object_id__]`
+   - Example: `[__tableau_internal_object_id__].1`
+
+2. XML Structure:
+
+   - Simple `<column>` element
+   - No `<calculation>` element
+   - No `<members>` or `<range>` elements
+
+3. Unique Attributes:
+   - Always has datatype="table"
+   - No remote-name or remote-type attributes
+   - No aggregation attribute
+
+Example:
+
+```xml
+<column datatype="table"
+        name="[__tableau_internal_object_id__].1"
+        role="dimension">
+</column>
+```
 
 ### How to Identify Parameters
 
@@ -629,5 +681,12 @@ Common roles found in TWB files:
 
 - `measure` - Numeric values that can be aggregated
 - `dimension` - Categorical values used for grouping
-- `filter` - Values used for filtering
-- `parameter` - User-configurable values
+
+## Type Definitions
+
+The TypeScript type definitions for TWB (Tableau Workbook) file structures can be found in [`src/types/twb.types.ts`](src/types/twb.types.ts). This file contains interfaces and type guards for:
+
+- Column types (regular, calculated, parameter)
+- Datasource structures
+- Workbook metadata
+- Helper functions for type checking

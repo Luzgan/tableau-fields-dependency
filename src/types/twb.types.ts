@@ -2,14 +2,16 @@
  * Raw TWB column and calculation types as they appear in the XML
  */
 
+import { ColumnAggregationType, ColumnDataType, ColumnRole } from "./enums";
+
 /**
  * Base attributes common to all column types in TWB files
  */
 export interface BaseTWBColumn {
   // Required fields that are truly common across all types
   "@_name": string;
-  "@_datatype": string;
-  "@_role": string;
+  "@_datatype": ColumnDataType;
+  "@_role": ColumnRole;
 
   // Optional field that is common across all types
   "@_caption"?: string;
@@ -20,7 +22,7 @@ export interface BaseTWBColumn {
  */
 export interface TWBRegularColumn extends BaseTWBColumn {
   // Required for regular columns
-  "@_aggregation": string;
+  "@_aggregation": ColumnAggregationType;
 
   // Data source specific fields
   "@_ordinal": string;
@@ -92,12 +94,22 @@ export interface TWBCalculationColumn extends BaseTWBColumn {
 }
 
 /**
+ * Internal Tableau column in TWB files
+ * These columns are used by Tableau internally and have special datatypes
+ */
+export interface TWBInternalColumn extends BaseTWBColumn {
+  "@_name": `[__tableau_internal_object_id__].${string}`;
+  "@_datatype": ColumnDataType.Table;
+}
+
+/**
  * Union type for any column in TWB files
  */
 export type TWBColumn =
   | TWBRegularColumn
   | TWBCalculationColumn
-  | TWBParameterColumn;
+  | TWBParameterColumn
+  | TWBInternalColumn;
 
 /**
  * Metadata record in TWB files
@@ -206,6 +218,15 @@ export function isParameterColumn(
 }
 
 /**
+ * Helper type guard to check if a column is an internal Tableau column
+ */
+export function isInternalColumn(
+  column: TWBColumn
+): column is TWBInternalColumn {
+  return column["@_name"].includes("[__tableau_internal_object_id__]");
+}
+
+/**
  * Helper type guard to check if a column is a data source
  */
 export function isDataSourceColumn(
@@ -214,6 +235,9 @@ export function isDataSourceColumn(
   return (
     !isCalculationColumn(column) &&
     !isParameterColumn(column) &&
+    !isInternalColumn(column) &&
+    !!(column as TWBRegularColumn)["@_remote-name"] &&
+    !!(column as TWBRegularColumn)["@_remote-type"] &&
     !!(column as TWBRegularColumn)["@_aggregation"]
   );
 }

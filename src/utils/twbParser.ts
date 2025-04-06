@@ -1,4 +1,4 @@
-import { TWBDatasource, TWBFile } from "../types/twb.types";
+import { TWBFile } from "../types/twb.types";
 import { XMLParser } from "fast-xml-parser";
 
 // Configure parser with the same options as in FileUpload.tsx
@@ -8,6 +8,19 @@ const parser = new XMLParser({
   allowBooleanAttributes: true,
   preserveOrder: false,
 });
+
+/**
+ * Ensures that a value is always an array
+ * If the value is undefined, returns an empty array
+ * If the value is an array, returns it as is
+ * If the value is a single item, wraps it in an array
+ */
+export function ensureArray<T>(value: T | T[] | undefined): T[] {
+  if (!value) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
 
 /**
  * Supported input types for TWB parsing
@@ -48,25 +61,10 @@ async function getContentFromInput(input: TWBInput): Promise<string> {
 }
 
 /**
- * Extracts datasources from the parsed XML structure
- */
-function extractDatasources(workbook: TWBFile): TWBDatasource[] {
-  if (!workbook?.workbook?.datasources?.datasource) {
-    return [];
-  }
-
-  const datasources = Array.isArray(workbook.workbook.datasources.datasource)
-    ? workbook.workbook.datasources.datasource
-    : [workbook.workbook.datasources.datasource];
-
-  return datasources;
-}
-
-/**
- * Parses a TWB file and returns the datasources
+ * Parses a TWB file and returns the complete workbook structure
  * Works with both browser File objects and Node.js file contents
  */
-export async function parseTWB(input: TWBInput): Promise<TWBDatasource[]> {
+export async function parseTWB(input: TWBInput): Promise<TWBFile> {
   try {
     // Get content as string
     const content = await getContentFromInput(input);
@@ -79,8 +77,7 @@ export async function parseTWB(input: TWBInput): Promise<TWBDatasource[]> {
       throw new TWBParseError("Invalid TWB file: missing workbook element");
     }
 
-    // Extract datasources
-    return extractDatasources(result);
+    return result;
   } catch (error) {
     if (error instanceof TWBParseError) {
       throw error;
