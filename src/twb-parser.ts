@@ -1,4 +1,9 @@
-import { TWBDatasource } from "./twb-types";
+import {
+  TWBDatasource,
+  TWBRegularColumn,
+  TWBCalculationColumn,
+  TWBParameterColumn,
+} from "./twb-types";
 import { XMLParser } from "fast-xml-parser";
 
 // Configure parser with the same options as in FileUpload.tsx
@@ -74,48 +79,183 @@ function extractDatasources(workbook: any): TWBDatasource[] {
     // Convert to our type structure
     const result: TWBDatasource = {
       "@_name": ds["@_name"] || "",
+      "@_caption": ds["@_caption"],
+      "@_inline": ds["@_inline"],
+      "@_version": ds["@_version"],
     };
 
-    // Handle columns
+    // Handle connection if present
+    if (ds.connection) {
+      result.connection = {
+        "@_class": ds.connection["@_class"],
+        "named-connections": {
+          "named-connection":
+            ds.connection["named-connections"]?.["named-connection"]?.map(
+              (nc: any) => ({
+                "@_caption": nc["@_caption"],
+                "@_name": nc["@_name"],
+                connection: {
+                  "@_class": nc.connection["@_class"],
+                  "@_cleaning": nc.connection["@_cleaning"],
+                  "@_compat": nc.connection["@_compat"],
+                  "@_directory": nc.connection["@_directory"],
+                  "@_tablename": nc.connection["@_tablename"],
+                  "@_workgroup-auth-mode":
+                    nc.connection["@_workgroup-auth-mode"],
+                },
+              })
+            ) || [],
+        },
+        relation: ds.connection.relation,
+      };
+    }
+
+    // Handle metadata records if present
+    if (ds["metadata-records"]?.["metadata-record"]) {
+      const records = Array.isArray(ds["metadata-records"]["metadata-record"])
+        ? ds["metadata-records"]["metadata-record"]
+        : [ds["metadata-records"]["metadata-record"]];
+
+      result["metadata-records"] = {
+        "metadata-record": records.map((record: any) => ({
+          "@_class": record["@_class"],
+          "remote-name": record["remote-name"],
+          "remote-type": record["remote-type"],
+          "local-name": record["local-name"],
+          "local-type": record["local-type"],
+          aggregation: record["aggregation"],
+          "contains-null": record["contains-null"],
+          precision: record["precision"],
+          ordinal: record["ordinal"],
+        })),
+      };
+    }
+
+    // Collect all columns from various places
+    const allColumns: any[] = [];
+
+    // Direct columns
     if (ds.column) {
       const columns = Array.isArray(ds.column) ? ds.column : [ds.column];
-      result.column = columns.map((col: any) => {
-        const baseColumn = {
-          "@_name": col["@_name"] || "",
-          "@_datatype": col["@_datatype"] || "",
-          "@_role": col["@_role"] || "",
-          "@_caption": col["@_caption"],
-          "@_default-format": col["@_default-format"],
-          "@_precision": col["@_precision"],
-          "@_contains-null": col["@_contains-null"],
-          "@_ordinal": col["@_ordinal"],
-          "@_remote-alias": col["@_remote-alias"],
-          "@_remote-name": col["@_remote-name"],
-          "@_remote-type": col["@_remote-type"],
-        };
+      allColumns.push(...columns);
+    }
 
-        // Check if it's a calculation
-        if (col.calculation || col["@_param-domain-type"]) {
-          return {
-            ...baseColumn,
-            "@_param-domain-type": col["@_param-domain-type"] as
-              | "list"
-              | "range"
-              | undefined,
-            calculation: col.calculation
-              ? {
-                  "@_class": "tableau",
-                  "@_formula": col.calculation["@_formula"] || "",
-                }
-              : undefined,
+    // Process columns from metadata records
+    if (result["metadata-records"]?.["metadata-record"]) {
+      const records = Array.isArray(
+        result["metadata-records"]["metadata-record"]
+      )
+        ? result["metadata-records"]["metadata-record"]
+        : [result["metadata-records"]["metadata-record"]];
+
+      records.forEach((record: any) => {
+        if (record["@_class"] === "column") {
+          const col: TWBRegularColumn = {
+            "@_name": `[${record["remote-name"]}]`,
+            "@_datatype": record["remote-type"] || "string",
+            "@_role":
+              record["local-type"] === "quantitative" ? "measure" : "dimension",
+            "@_caption": record["local-name"],
+            "@_remote-name": record["remote-name"],
+            "@_remote-type": record["remote-type"],
+            "@_aggregation": record["aggregation"] || "None",
           };
+          allColumns.push(col);
+        }
+      });
+    }
+
+    // Process columns from relation structure
+    if (ds.connection?.relation) {
+      const processRelation = (relation: any) => {
+        if (relation.columns?.column) {
+          const cols = Array.isArray(relation.columns.column)
+            ? relation.columns.column
+            : [relation.columns.column];
+
+          cols.forEach((col: any) => {
+            const column: TWBRegularColumn = {
+              "@_name": `[${col["@_name"]}]`,
+              "@_datatype": col["@_datatype"] || "string",
+              "@_role":
+                col["@_name"]?.toLowerCase().includes("sales") ||
+                col["@_name"]?.toLowerCase().includes("profit") ||
+                col["@_name"]?.toLowerCase().includes("quantity") ||
+                col["@_name"]?.toLowerCase().includes("target")
+                  ? "measure"
+                  : "dimension",
+              "@_caption": col["@_name"],
+              "@_remote-name": col["@_name"],
+              "@_remote-type": col["@_datatype"] || "string",
+              "@_aggregation":
+                col["@_name"]?.toLowerCase().includes("sales") ||
+                col["@_name"]?.toLowerCase().includes("profit") ||
+                col["@_name"]?.toLowerCase().includes("quantity") ||
+                col["@_name"]?.toLowerCase().includes("target")
+                  ? "Sum"
+                  : "None",
+            };
+            allColumns.push(column);
+          });
         }
 
-        // Regular column
-        return {
-          ...baseColumn,
-          "@_aggregation": col["@_aggregation"] || "None",
-        };
+        // Process nested relations
+        if (relation.relation) {
+          if (Array.isArray(relation.relation)) {
+            relation.relation.forEach(processRelation);
+          } else {
+            processRelation(relation.relation);
+          }
+        }
+      };
+
+      processRelation(ds.connection.relation);
+    }
+
+    // Process all collected columns
+    if (allColumns.length > 0) {
+      result.column = allColumns.map((col: any) => {
+        // Check if it's a calculation or parameter
+        if (col.calculation) {
+          const calcColumn: TWBCalculationColumn = {
+            "@_name": col["@_name"] || "",
+            "@_datatype": col["@_datatype"] || "string",
+            "@_role": col["@_role"] || "dimension",
+            "@_caption": col["@_caption"],
+            "@_default-format": col["@_default-format"],
+            "@_precision": col["@_precision"],
+            "@_contains-null": col["@_contains-null"],
+            "@_ordinal": col["@_ordinal"],
+            "@_remote-alias": col["@_remote-alias"],
+            "@_remote-name": col["@_remote-name"],
+            "@_remote-type": col["@_remote-type"],
+            calculation: {
+              "@_class": "tableau",
+              "@_formula": col.calculation["@_formula"] || "",
+            },
+          };
+          return calcColumn;
+        } else if (col["@_param-domain-type"]) {
+          const paramColumn: TWBParameterColumn = {
+            "@_name": col["@_name"] || "",
+            "@_datatype": col["@_datatype"] || "string",
+            "@_role": col["@_role"] || "dimension",
+            "@_caption": col["@_caption"],
+            "@_default-format": col["@_default-format"],
+            "@_precision": col["@_precision"],
+            "@_contains-null": col["@_contains-null"],
+            "@_ordinal": col["@_ordinal"],
+            "@_remote-alias": col["@_remote-alias"],
+            "@_remote-name": col["@_remote-name"],
+            "@_remote-type": col["@_remote-type"],
+            "@_param-domain-type": col["@_param-domain-type"],
+            members: col.members,
+            aliases: col.aliases,
+          };
+          return paramColumn;
+        } else {
+          return col as TWBRegularColumn;
+        }
       });
     }
 

@@ -47,11 +47,12 @@ export interface CalculationNode extends BaseNode {
 
 export type Node = ColumnNode | CalculationNode | ParameterNode;
 
-export interface Reference {
+export type Reference = {
   sourceId: string;
   targetId: string;
   type: "direct" | "indirect";
-}
+  matchedText: string;
+};
 
 export interface FileData {
   filename: string;

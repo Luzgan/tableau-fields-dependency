@@ -1,43 +1,46 @@
 import { Box, Grid } from "@mui/material";
-import React, { useState } from "react";
+import React from "react";
+import { Route, Routes } from "react-router-dom";
 import FieldDetails from "./FieldDetails";
 import FieldsList from "./FieldsList";
 import NoFieldSelected from "./NoFieldSelected";
-import { Node } from "./types";
 
 const FieldsTab: React.FC = () => {
-  const [selectedField, setSelectedField] = useState<Node | null>(null);
-
   return (
     <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
-      <Grid container spacing={2} sx={{ flex: 1, margin: 0, width: "auto" }}>
+      <Grid container spacing={0} sx={{ flex: 1 }}>
         <Grid
           item
-          xs={4}
+          xs={3}
           sx={{
             height: "100%",
             overflow: "hidden",
             display: "flex",
-            paddingTop: "16px !important",
+            borderRight: 2,
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            boxShadow: 1,
           }}
         >
-          <FieldsList onFieldSelect={setSelectedField} />
+          <FieldsList />
         </Grid>
         <Grid
           item
-          xs={8}
+          xs={9}
           sx={{
             height: "100%",
-            overflow: "hidden",
+            overflow: "auto",
             display: "flex",
-            paddingTop: "16px !important",
+            p: 3,
+            bgcolor: "grey.50",
           }}
         >
-          {selectedField ? (
-            <FieldDetails field={selectedField} />
-          ) : (
-            <NoFieldSelected />
-          )}
+          <Box sx={{ width: "100%" }}>
+            <Routes>
+              <Route path="/" element={<NoFieldSelected />} />
+              <Route path="/field/:id" element={<FieldDetails />} />
+            </Routes>
+          </Box>
         </Grid>
       </Grid>
     </Box>

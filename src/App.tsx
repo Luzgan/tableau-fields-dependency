@@ -7,21 +7,29 @@ import {
   IconButton,
 } from "@mui/material";
 import { Clear } from "@mui/icons-material";
-import React, { useState } from "react";
-import { AppProvider, useAppContext } from "./AppContext";
-import FieldDetails from "./FieldDetails";
-import FieldsList from "./FieldsList";
-import FileUpload from "./FileUpload";
-import { Node } from "./types";
+import React, { useRef } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { NotificationProvider } from "./components/Notification";
+import { useAppContext } from "./AppContext";
+import FieldsTab from "./FieldsTab";
+import FileUpload from "./FileUpload";
 
 const theme = createTheme();
 
 function AppContent() {
-  const [selectedField, setSelectedField] = useState<Node | null>(null);
   const { fileData, setFileData } = useAppContext();
-
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const hasLoadedFile = fileData !== null;
+
+  const handleClearFile = () => {
+    setFileData(null);
+    navigate("/");
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <Box
@@ -69,7 +77,7 @@ function AppContent() {
                 </Typography>
                 <IconButton
                   size="small"
-                  onClick={() => setFileData(null)}
+                  onClick={handleClearFile}
                   aria-label="Clear"
                   sx={{
                     color: "primary.contrastText",
@@ -83,40 +91,15 @@ function AppContent() {
                 </IconButton>
               </>
             )}
-            <FileUpload />
+            <FileUpload fileInputRef={fileInputRef} />
           </Box>
         </Box>
       </Box>
       {hasLoadedFile ? (
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          <Box
-            sx={{
-              width: 300,
-              borderRight: 1,
-              borderColor: "divider",
-              bgcolor: "background.paper",
-              overflow: "auto",
-            }}
-          >
-            <FieldsList onFieldSelect={setSelectedField} />
-          </Box>
-          <Box sx={{ flex: 1, overflow: "auto", p: 3 }}>
-            {selectedField ? (
-              <FieldDetails field={selectedField} />
-            ) : (
-              <Box
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "text.secondary",
-                }}
-              >
-                Select a field to view details
-              </Box>
-            )}
-          </Box>
+          <Routes>
+            <Route path="/*" element={<FieldsTab />} />
+          </Routes>
         </Box>
       ) : (
         <Box
@@ -137,14 +120,12 @@ function AppContent() {
 
 const App: React.FC = () => {
   return (
-    <AppProvider>
-      <NotificationProvider>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <AppContent />
-        </ThemeProvider>
-      </NotificationProvider>
-    </AppProvider>
+    <NotificationProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppContent />
+      </ThemeProvider>
+    </NotificationProvider>
   );
 };
 

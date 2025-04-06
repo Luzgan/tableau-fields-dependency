@@ -101,24 +101,53 @@ function cleanCalculation(formula: string): string {
 /**
  * Extracts field references from a calculation formula
  */
-function extractReferences(formula: string): string[] {
+function extractReferences(
+  formula: string
+): { ref: string; matchedText: string }[] {
   // Clean the formula first
   const cleanedFormula = cleanCalculation(formula);
 
-  // Match field references like [Field Name] or [Field.Name]
-  const fieldPattern = /\[([\w\s\._-]+)\]/g;
-  const matches = cleanedFormula.match(fieldPattern) || [];
+  // Match field references like [Field Name] or [Datasource].[Field Name]
+  const fieldPattern = /\[([^\]]+)\]|\[([^\]]+)\]\.\[([^\]]+)\]/g;
+  const refs = new Map<string, string>();
 
-  // Clean up the matches to remove brackets and deduplicate
-  const uniqueRefs = new Set(matches.map((match) => match.slice(1, -1)));
-  return Array.from(uniqueRefs);
+  // Store unique references with their full matched text (including brackets)
+  for (const match of cleanedFormula.matchAll(fieldPattern)) {
+    if (match[1]) {
+      // Simple field reference [Field Name]
+      refs.set(match[1], match[0]);
+    } else if (match[2] && match[3]) {
+      // Datasource-qualified field reference [Datasource].[Field Name]
+      refs.set(`${match[2]}.${match[3]}`, match[0]);
+    }
+  }
+
+  return Array.from(refs.entries()).map(([ref, matchedText]) => ({
+    ref,
+    matchedText,
+  }));
 }
 
 /**
- * Generates a unique ID for a node
+ * Generates a unique ID for a node by making datasourceName--columnName URL-safe
  */
 function generateNodeId(datasourceName: string, columnName: string): string {
-  return `${datasourceName}::${columnName}`;
+  // Clean up datasource name
+  const safeDatasourceName = datasourceName
+    .replace(/[\s\/\{\}\(\)]+/g, "-") // Replace spaces and brackets with dashes
+    .replace(/[^a-zA-Z0-9\-_]/g, "") // Remove any other special characters (including colons)
+    .replace(/-+/g, "-") // Replace multiple dashes with single dash
+    .replace(/^-|-$/g, ""); // Remove leading/trailing dashes
+
+  // Clean up column name - remove brackets and make URL-safe
+  const safeColumnName = columnName
+    .replace(/[\[\]]/g, "") // Remove square brackets
+    .replace(/[\s\/\{\}\(\)]+/g, "-") // Replace spaces and other brackets with dashes
+    .replace(/[^a-zA-Z0-9\-_]/g, "") // Remove any other special characters (including colons)
+    .replace(/-+/g, "-") // Replace multiple dashes with single dash
+    .replace(/^-|-$/g, ""); // Remove leading/trailing dashes
+
+  return `${safeDatasourceName}--${safeColumnName}`;
 }
 
 /**
@@ -197,14 +226,20 @@ export function transformTWBData(
         // Extract references from calculation
         if (calcNode.calculation) {
           const fieldRefs = extractReferences(calcNode.calculation);
-          fieldRefs.forEach((fieldName) => {
-            referencedFields.add(fieldName);
-            const ref: Reference = {
+          fieldRefs.forEach(({ ref, matchedText }) => {
+            referencedFields.add(ref);
+            // Check if the reference contains a datasource name
+            const [dsName, fieldName] = ref.split(".");
+            const targetId = fieldName
+              ? generateNodeId(dsName, fieldName) // Datasource-qualified reference
+              : generateNodeId(ds["@_name"], ref); // Simple reference in same datasource
+            const reference: Reference = {
               sourceId: id,
-              targetId: fieldName,
+              targetId,
               type: "direct",
+              matchedText,
             };
-            references.push(ref);
+            references.push(reference);
           });
         }
       } else {
@@ -237,28 +272,36 @@ export function transformTWBData(
 
   // Second pass: Update reference target IDs
   const updatedReferences: Reference[] = references.map((ref) => {
-    // Try to find the actual node ID for the referenced field by exact match
+    // Try to find the actual node ID for the referenced field
     const targetNode = Array.from(nodesById.values()).find((node) => {
-      // Try exact match first
-      if (node.name === ref.targetId) return true;
-
-      // If no exact match, try matching the field reference pattern
-      if (node.name.includes("[") && node.name.includes("]")) {
-        const cleanName = node.name.slice(1, -1); // Remove brackets
-        return cleanName === ref.targetId;
+      // Match against node's internal name (which already has brackets)
+      if (node.name === ref.matchedText) {
+        return true;
       }
 
-      // If the node name doesn't have brackets, add them for comparison
-      return `[${node.name}]` === `[${ref.targetId}]`;
+      // Match against node's caption with brackets added
+      if (node.caption && `[${node.caption}]` === ref.matchedText) {
+        return true;
+      }
+
+      // Handle datasource-qualified references
+      const [dsName, fieldName] = ref.matchedText.split(".");
+      if (dsName && fieldName) {
+        return (
+          node.name === fieldName &&
+          node.id.startsWith(dsName.replace(/[\[\]]/g, ""))
+        );
+      }
+
+      return false;
     });
 
-    const newRef: Reference = {
+    return {
       sourceId: ref.sourceId,
       targetId: targetNode?.id || ref.targetId,
-      // Mark as indirect if we couldn't find the exact node
       type: targetNode ? "direct" : "indirect",
+      matchedText: ref.matchedText,
     };
-    return newRef;
   });
 
   return {

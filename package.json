@@ -8,9 +8,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "test:e2e": "playwright test",
-    "test:unit": "jest --testMatch='**/__tests__/**/*.test.ts?(x)'",
+    "test": "jest __tests__/unit",
+    "test:e2e": "playwright test __tests__/e2e",
+    "test:all": "npm run test && npm run test:e2e",
     "start": "react-scripts start",
     "eject": "react-scripts eject"
   },

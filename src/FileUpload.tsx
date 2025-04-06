@@ -1,16 +1,21 @@
 import { Upload } from "@mui/icons-material";
 import { Box, Button } from "@mui/material";
-import React, { useRef, useEffect } from "react";
+import React, { RefObject } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppContext } from "./AppContext";
 import { useNotification } from "./components/Notification";
 import { FileData, ColumnNode, CalculationNode } from "./types";
 import { parseTWB } from "./twb-parser";
 import { transformTWBData } from "./twb-transformer";
 
-const FileUpload: React.FC = () => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { fileData, setFileData } = useAppContext();
+interface FileUploadProps {
+  fileInputRef: RefObject<HTMLInputElement>;
+}
+
+const FileUpload: React.FC<FileUploadProps> = ({ fileInputRef }) => {
+  const { setFileData } = useAppContext();
   const { showNotification } = useNotification();
+  const navigate = useNavigate();
 
   const resetFileInput = () => {
     if (fileInputRef.current) {
@@ -22,8 +27,9 @@ const FileUpload: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Clear existing data before processing new file
+    // Clear existing data and navigate to root before processing new file
     setFileData(null);
+    navigate("/");
 
     try {
       console.log("\n=== Processing TWB File ===");
@@ -80,37 +86,29 @@ const FileUpload: React.FC = () => {
           : "An unexpected error occurred while processing the file";
 
       showNotification(errorMessage, "error");
-      setFileData(null);
-    } finally {
-      // Always reset the file input after processing
       resetFileInput();
     }
-  };
-
-  const handleUploadClick = () => {
-    // Reset the input before opening the file dialog
-    resetFileInput();
-    fileInputRef.current?.click();
   };
 
   return (
     <Box>
       <input
-        type="file"
         ref={fileInputRef}
-        onChange={onFileChange}
+        type="file"
         accept=".twb"
+        onChange={onFileChange}
         style={{ display: "none" }}
       />
       <Button
-        onClick={handleUploadClick}
+        variant="contained"
+        component="label"
         size="small"
+        onClick={() => fileInputRef.current?.click()}
         startIcon={<Upload />}
         sx={{
-          color: "primary.contrastText",
-          textTransform: "none",
+          bgcolor: "rgba(255, 255, 255, 0.1)",
           "&:hover": {
-            bgcolor: "rgba(255, 255, 255, 0.1)",
+            bgcolor: "rgba(255, 255, 255, 0.2)",
           },
         }}
       >

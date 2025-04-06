@@ -84,12 +84,90 @@ export type TWBColumn =
   | TWBParameterColumn;
 
 /**
+ * Metadata record in TWB files
+ */
+export interface TWBMetadataRecord {
+  "@_class": string;
+  "remote-name": string;
+  "remote-type": string;
+  "local-name": string;
+  "local-type": string;
+  aggregation?: string;
+  "contains-null"?: boolean;
+  precision?: number;
+  ordinal?: number;
+}
+
+/**
+ * Relation column in TWB files
+ */
+export interface TWBRelationColumn {
+  "@_datatype": string;
+  "@_name": string;
+  "@_ordinal": string;
+}
+
+/**
+ * Relation structure in TWB files
+ */
+export interface TWBRelation {
+  "@_join"?: string;
+  "@_type"?: string;
+  "@_connection"?: string;
+  "@_name"?: string;
+  "@_table"?: string;
+  clause?: {
+    "@_type": string;
+    expression: {
+      "@_op": string;
+      expression: Array<{
+        "@_op": string;
+      }>;
+    };
+  };
+  columns?: {
+    "@_gridOrigin"?: string;
+    "@_header"?: string;
+    "@_outcome"?: string;
+    column: TWBRelationColumn | TWBRelationColumn[];
+  };
+  relation?: TWBRelation | TWBRelation[];
+}
+
+/**
+ * Connection structure in TWB files
+ */
+export interface TWBConnection {
+  "@_class": string;
+  "named-connections": {
+    "named-connection": Array<{
+      "@_caption": string;
+      "@_name": string;
+      connection: {
+        "@_class": string;
+        "@_cleaning"?: string;
+        "@_compat"?: string;
+        "@_directory"?: string;
+        "@_tablename"?: string;
+        "@_workgroup-auth-mode"?: string;
+      };
+    }>;
+  };
+  relation: TWBRelation;
+}
+
+/**
  * Datasource structure in TWB files
  */
 export interface TWBDatasource {
-  // Required
   "@_name": string;
-  // Optional - some datasources might not have columns
+  "@_caption"?: string;
+  "@_inline"?: string;
+  "@_version"?: string;
+  connection?: TWBConnection;
+  "metadata-records"?: {
+    "metadata-record": TWBMetadataRecord | TWBMetadataRecord[];
+  };
   column?: TWBColumn | TWBColumn[];
 }
 

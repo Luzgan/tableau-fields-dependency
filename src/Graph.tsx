@@ -18,6 +18,7 @@ interface NodeData {
   label: string;
   type: string;
   caption?: string;
+  id: string;
 }
 
 const CustomNode = ({ data }: { data: NodeData }) => (
@@ -30,6 +31,8 @@ const CustomNode = ({ data }: { data: NodeData }) => (
       borderColor: data.type === "column" ? "#90caf9" : "#ffb74d",
       minWidth: "150px",
     }}
+    data-testid="node"
+    data-node-id={data.id}
   >
     <Handle type="target" position={Position.Top} />
     <div style={{ fontWeight: "bold" }}>{data.label}</div>
@@ -84,6 +87,7 @@ const Graph: React.FC = () => {
           label: node.displayName,
           type: node.type,
           caption: node.caption,
+          id: node.id,
         },
       };
 

@@ -317,4 +317,34 @@ describe("TWB Transformer", () => {
       }
     });
   });
+
+  describe("Node ID Generation", () => {
+    it("should generate URL-safe node IDs", () => {
+      const testData: TWBDatasource[] = [
+        {
+          "@_name": "Test Datasource",
+          column: [
+            {
+              "@_name": "[Test Column]",
+              "@_role": "dimension",
+              "@_datatype": "string",
+            } as TWBRegularColumn,
+          ],
+        },
+      ];
+
+      const result = transformTWBData(testData, "test.twb");
+      const nodeId = Array.from(result.nodesById.values())[0].id;
+
+      // Check that the ID only contains URL-safe characters
+      expect(nodeId).toMatch(/^[A-Za-z0-9_-]+$/);
+
+      // Check that the ID is consistent
+      const secondResult = transformTWBData(testData, "test.twb");
+      expect(Array.from(secondResult.nodesById.values())[0].id).toBe(nodeId);
+
+      // Check that the ID format is correct (datasourceName--columnName without brackets)
+      expect(nodeId).toBe("Test-Datasource--Test-Column");
+    });
+  });
 });

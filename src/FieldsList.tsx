@@ -16,12 +16,9 @@ import {
   FilterList as FilterIcon,
 } from "@mui/icons-material";
 import React, { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "./AppContext";
 import { Node, NodeType } from "./types";
-
-interface FieldsListProps {
-  onFieldSelect: (field: Node | null) => void;
-}
 
 const nodeTypeConfig = {
   column: {
@@ -50,8 +47,10 @@ const roleConfig = {
   },
 };
 
-const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
+const FieldsList: React.FC = () => {
   const { helpers } = useAppContext();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<NodeType[]>([
@@ -99,6 +98,10 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
     }
   };
 
+  const handleFieldSelect = (node: Node) => {
+    navigate(`/field/${encodeURIComponent(node.id)}`);
+  };
+
   const filteredNodes = filterNodes(nodes);
 
   return (
@@ -111,6 +114,9 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ flex: 1 }}
+            inputProps={{
+              "aria-label": "Search fields",
+            }}
           />
           <Tooltip title={`${showFilters ? "Hide" : "Show"} filters`}>
             <IconButton
@@ -246,27 +252,36 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
           return (
             <Box
               key={node.id}
-              onClick={() => onFieldSelect(node)}
+              onClick={() => handleFieldSelect(node)}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  onFieldSelect(node);
+                  handleFieldSelect(node);
                 }
               }}
+              data-testid="list-item"
+              data-node-id={node.id}
               sx={{
                 p: 2,
                 mb: 1,
                 cursor: "pointer",
-                backgroundColor: "grey.100",
+                backgroundColor: node.id === id ? "primary.main" : "grey.100",
+                color: node.id === id ? "primary.contrastText" : "inherit",
                 borderRadius: 1,
                 "&:hover": {
-                  backgroundColor: "grey.200",
+                  backgroundColor: node.id === id ? "primary.dark" : "grey.200",
                 },
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <Icon sx={{ color: config.color, mr: 1, fontSize: "1.2rem" }} />
+                <Icon
+                  sx={{
+                    color: node.id === id ? "inherit" : config.color,
+                    mr: 1,
+                    fontSize: "1.2rem",
+                  }}
+                />
                 <Typography>{node.displayName}</Typography>
               </Box>
               <Box sx={{ display: "flex", gap: 1, ml: 3.2 }}>
@@ -280,8 +295,11 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
                       : "Parameter"
                   }
                   sx={{
-                    backgroundColor: `${config.color}20`,
-                    color: config.color,
+                    backgroundColor:
+                      node.id === id
+                        ? "rgba(255, 255, 255, 0.2)"
+                        : `${config.color}20`,
+                    color: node.id === id ? "inherit" : config.color,
                     fontWeight: 500,
                     fontSize: "0.75rem",
                   }}
@@ -290,10 +308,14 @@ const FieldsList: React.FC<FieldsListProps> = ({ onFieldSelect }) => {
                   size="small"
                   label={node.role}
                   sx={{
-                    backgroundColor: `${
-                      roleConfig[node.role]?.color || "#757575"
-                    }20`,
-                    color: roleConfig[node.role]?.color || "#757575",
+                    backgroundColor:
+                      node.id === id
+                        ? "rgba(255, 255, 255, 0.2)"
+                        : `${roleConfig[node.role]?.color || "#757575"}20`,
+                    color:
+                      node.id === id
+                        ? "inherit"
+                        : roleConfig[node.role]?.color || "#757575",
                     fontWeight: 500,
                     fontSize: "0.75rem",
                     textTransform: "capitalize",

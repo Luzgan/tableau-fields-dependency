@@ -1,5 +1,6 @@
 import { Box, Tab, Tabs, Typography } from "@mui/material";
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAppContext } from "./AppContext";
 import { Node, Reference } from "./types";
 
@@ -123,12 +124,24 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
           return (
             <Box
               key={refNode.id}
+              component={Link}
+              to={`/field/${refNode.id}`}
+              state={{ from: "reference" }}
               sx={{
                 p: 2,
                 mb: 1,
                 backgroundColor: "grey.100",
                 borderRadius: 1,
+                cursor: "pointer",
+                textDecoration: "none",
+                color: "inherit",
+                display: "block",
+                "&:hover": {
+                  backgroundColor: "grey.200",
+                },
               }}
+              data-testid="reference-link"
+              data-node-id={refNode.id}
             >
               <Box
                 sx={{

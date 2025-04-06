@@ -48,8 +48,8 @@ test.describe("FileUpload", () => {
 
       // Verify fields list is visible (indicating successful load)
       await expect(
-        page.getByRole("textbox", { name: "Search fields..." })
-      ).toBeVisible();
+        page.getByRole("textbox", { name: "Search fields" })
+      ).toBeVisible({ timeout: 7000 });
 
       // Click clear and verify file is removed
       await page.getByRole("button", { name: "Clear" }).click();
@@ -142,8 +142,8 @@ test.describe("FileUpload", () => {
 
     // Verify search field is still visible
     await expect(
-      page.getByRole("textbox", { name: "Search fields..." })
-    ).toBeVisible();
+      page.getByRole("textbox", { name: "Search fields" })
+    ).toBeVisible({ timeout: 7000 });
   });
 
   test("should handle reloading the same file", async ({
@@ -163,7 +163,9 @@ test.describe("FileUpload", () => {
     // Wait for success notification and check fields
     await page.getByRole("alert", { name: "success notification" }).waitFor();
     // Wait for search field to be visible (indicates fields are loaded)
-    await page.getByRole("textbox", { name: "Search fields..." }).waitFor();
+    await page
+      .getByRole("textbox", { name: "Search fields" })
+      .waitFor({ timeout: 7000 });
     // Wait for fields to be rendered
     await page.waitForSelector('[role="button"]');
     // Get initial count of field boxes
@@ -185,7 +187,9 @@ test.describe("FileUpload", () => {
     // Wait for success notification and check fields
     await page.getByRole("alert", { name: "success notification" }).waitFor();
     // Wait for search field to be visible (indicates fields are loaded)
-    await page.getByRole("textbox", { name: "Search fields..." }).waitFor();
+    await page
+      .getByRole("textbox", { name: "Search fields" })
+      .waitFor({ timeout: 7000 });
     // Wait for fields to be rendered
     await page.waitForSelector('[role="button"]');
     // Get count of field boxes after second load
