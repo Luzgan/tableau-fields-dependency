@@ -6,52 +6,54 @@
  * Base attributes common to all column types in TWB files
  */
 export interface BaseTWBColumn {
-  // Required fields
+  // Required fields that are truly common across all types
   "@_name": string;
   "@_datatype": string;
   "@_role": string;
 
-  // Optional fields
+  // Optional field that is common across all types
   "@_caption"?: string;
-  "@_default-format"?: string;
-  "@_precision"?: string;
-  "@_contains-null"?: string;
-  "@_ordinal"?: string;
-  "@_remote-alias"?: string;
-  "@_remote-name"?: string;
-  "@_remote-type"?: string;
 }
 
 /**
- * Regular column in TWB files
+ * Regular column (data source field) in TWB files
  */
 export interface TWBRegularColumn extends BaseTWBColumn {
   // Required for regular columns
   "@_aggregation": string;
-}
 
-/**
- * Calculation definition in TWB files
- */
-export interface TWBCalculation {
-  // Both fields are required in calculation
-  "@_class": "tableau";
-  "@_formula": string;
+  // Data source specific fields
+  "@_ordinal": string;
+  "@_remote-alias": string;
+  "@_remote-name": string;
+  "@_remote-type": string;
+  "@_precision"?: string;
+  "@_contains-null"?: string;
+  "@_local-type"?: string;
 }
 
 /**
  * Member definition in TWB files
  */
 interface TWBMember {
-  value: string;
-  alias?: string;
+  "@_value": string;
+  "@_alias"?: string;
 }
 
 /**
- * Members container in TWB files
+ * Alias definition in TWB files
  */
-interface TWBMembers {
-  member: TWBMember[];
+interface TWBAlias {
+  "@_key": string;
+  "@_value": string;
+}
+
+/**
+ * Range definition in TWB files
+ */
+export interface TWBRange {
+  "@_min": string | number;
+  "@_max": string | number;
 }
 
 /**
@@ -59,19 +61,33 @@ interface TWBMembers {
  */
 export interface TWBParameterColumn extends BaseTWBColumn {
   "@_param-domain-type": "list" | "range";
-  members?: TWBMembers;
-  aliases?: {
-    alias: Array<{
-      key: string;
-      value: string;
-    }>;
+  "@_default-format"?: string;
+  members?: {
+    member: TWBMember[];
   };
+  range?: TWBRange;
+  aliases?: {
+    alias: TWBAlias[];
+  };
+  calculation?: {
+    "@_class": "tableau";
+    "@_formula": string;
+  };
+}
+
+/**
+ * Calculation definition in TWB files
+ */
+export interface TWBCalculation {
+  "@_class": "tableau";
+  "@_formula": string;
 }
 
 /**
  * Calculation column in TWB files
  */
 export interface TWBCalculationColumn extends BaseTWBColumn {
+  "@_default-format"?: string;
   calculation: TWBCalculation;
 }
 
@@ -187,4 +203,96 @@ export function isParameterColumn(
   column: TWBColumn
 ): column is TWBParameterColumn {
   return !!(column as TWBParameterColumn)["@_param-domain-type"];
+}
+
+/**
+ * Helper type guard to check if a column is a data source
+ */
+export function isDataSourceColumn(
+  column: TWBColumn
+): column is TWBRegularColumn {
+  return (
+    !isCalculationColumn(column) &&
+    !isParameterColumn(column) &&
+    !!(column as TWBRegularColumn)["@_aggregation"]
+  );
+}
+
+/**
+ * Document format change manifest in TWB files
+ */
+export interface TWBDocumentFormatChangeManifest {
+  [key: string]: boolean | undefined;
+}
+
+/**
+ * Repository location in TWB files
+ */
+export interface TWBRepositoryLocation {
+  "@_derived-from"?: string;
+  "@_id"?: string;
+  "@_path"?: string;
+  "@_revision"?: string;
+  "@_site"?: string;
+}
+
+/**
+ * Preference in TWB files
+ */
+export interface TWBPreference {
+  "@_name": string;
+  "@_value": string;
+}
+
+/**
+ * Style format in TWB files
+ */
+export interface TWBStyleFormat {
+  "@_attr": string;
+  "@_value": string;
+}
+
+/**
+ * Style rule in TWB files
+ */
+export interface TWBStyleRule {
+  "@_element": string;
+  format: TWBStyleFormat | TWBStyleFormat[];
+}
+
+/**
+ * Style in TWB files
+ */
+export interface TWBStyle {
+  "style-rule": TWBStyleRule | TWBStyleRule[];
+}
+
+/**
+ * Workbook structure in TWB files
+ */
+export interface TWBWorkbook {
+  "@_original-version": string;
+  "@_version": string;
+  "@_source-build": string;
+  "@_source-platform": string;
+  "@_xml:base"?: string;
+  "@_include-phone-layouts"?: string;
+  "@_xmlns:user"?: string;
+
+  "document-format-change-manifest": TWBDocumentFormatChangeManifest;
+  "repository-location"?: TWBRepositoryLocation;
+  preferences: {
+    preference: TWBPreference | TWBPreference[];
+  };
+  style?: TWBStyle;
+  datasources: {
+    datasource: TWBDatasource | TWBDatasource[];
+  };
+}
+
+/**
+ * Root TWB file structure
+ */
+export interface TWBFile {
+  workbook: TWBWorkbook;
 }

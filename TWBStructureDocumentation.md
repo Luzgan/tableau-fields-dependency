@@ -4,6 +4,71 @@
 
 A Tableau workbook (.twb) file is an XML document that contains definitions for data sources, calculated fields, parameters, and other workbook elements. This document outlines the key structures found in TWB files.
 
+## Root Structure
+
+A Tableau workbook file follows this XML structure:
+
+```xml
+<?xml version='1.0' encoding='utf-8' ?>
+<workbook original-version='18.1' source-build='...' source-platform='...' version='18.1' xmlns:user='...'>
+  <!-- Document format changes -->
+  <document-format-change-manifest>
+    <feature1 />
+    <feature2 />
+    <!-- ... -->
+  </document-format-change-manifest>
+
+  <!-- Optional repository location -->
+  <repository-location derived-from='...' id='...' path='...' revision='...' />
+
+  <!-- UI preferences -->
+  <preferences>
+    <preference name='...' value='...' />
+  </preferences>
+
+  <!-- Optional styles -->
+  <style>
+    <style-rule element='...'>
+      <format attr='...' value='...' />
+    </style-rule>
+  </style>
+
+  <!-- Data sources section - always present -->
+  <datasources>
+    <datasource name='...' version='18.1'>
+      <!-- Datasource content -->
+    </datasource>
+    <!-- More datasources... -->
+  </datasources>
+
+  <!-- Other workbook elements... -->
+</workbook>
+```
+
+### Required Workbook Attributes
+
+- `original-version` - Original version of Tableau that created the workbook
+- `version` - Current version of the workbook
+- `source-build` - Build number of Tableau that last modified the workbook
+- `source-platform` - Platform where the workbook was last modified (win/mac)
+
+### Optional Workbook Attributes
+
+- `xml:base` - Base URL for the workbook
+- `include-phone-layouts` - Whether phone layouts are included
+- `xmlns:user` - XML namespace for user elements
+
+### Required Sections
+
+1. `<document-format-change-manifest>` - List of format changes and features
+2. `<preferences>` - UI and workbook preferences
+3. `<datasources>` - Data source definitions
+
+### Optional Sections
+
+1. `<repository-location>` - Information about workbook location in repository
+2. `<style>` - Workbook style definitions
+
 ## Recognition Rules
 
 ### How to Identify Parameters
@@ -457,3 +522,112 @@ Parameters are defined in the `<datasources>` section as special `<column>` elem
    - Location in workbook
    - Relationship to other fields
    - Usage in visualizations
+
+## Attribute Distribution
+
+### Common Attributes (All Field Types)
+
+These attributes appear in all types of fields (data source, calculated, and parameters):
+
+- `name` - The identifier of the field
+- `datatype` - The data type (string, integer, real, etc.)
+- `role` - The role in visualizations (measure/dimension)
+- `caption` - Display name (optional)
+
+### Data Source Field Specific Attributes
+
+These attributes only appear in data source fields:
+
+- `remote-name` - Original name from the data source
+- `remote-type` - Original data type from the source
+- `remote-alias` - Alias in the data source
+- `ordinal` - Position in the source table
+- `aggregation` - Default aggregation type
+- `precision` - Numeric precision for numbers
+- `contains-null` - Whether nulls are allowed
+- `local-type` - Local data type representation
+
+### Calculated Field Specific Attributes
+
+These attributes are specific to calculated fields:
+
+- `default-format` - Display format for the result
+- `calculation/formula` - The calculation expression
+- `calculation/class` - Always "tableau"
+
+### Parameter Specific Attributes
+
+These attributes only appear in parameters:
+
+- `param-domain-type` - Type of parameter (list/range)
+- `members` - List of allowed values (for list parameters)
+- `range` - Min/max values (for range parameters)
+- `aliases` - Display values for parameter options
+
+#### Parameter Patterns
+
+Common parameter patterns found in TWB files:
+
+1. **Simple List Parameters**
+
+   ```xml
+   <column datatype='string' name='[SimpleParam]' param-domain-type='list'>
+     <members>
+       <member value='value1' />
+       <member value='value2' />
+     </members>
+   </column>
+   ```
+
+2. **Aliased List Parameters**
+
+   ```xml
+   <column datatype='string' name='[AliasedParam]' param-domain-type='list'>
+     <aliases>
+       <alias key='value1' value='Display Name 1' />
+       <alias key='value2' value='Display Name 2' />
+     </aliases>
+     <members>
+       <member alias='Display Name 1' value='value1' />
+       <member alias='Display Name 2' value='value2' />
+     </members>
+   </column>
+   ```
+
+3. **Boolean Parameters**
+
+   ```xml
+   <column datatype='boolean' name='[BoolParam]' param-domain-type='list'>
+     <members>
+       <member value='true' />
+       <member value='false' />
+     </members>
+   </column>
+   ```
+
+4. **Range Parameters**
+   ```xml
+   <column datatype='integer' name='[RangeParam]' param-domain-type='range'>
+     <range min='0' max='100' />
+   </column>
+   ```
+
+### Data Types
+
+Common data types found in TWB files:
+
+- `string` - Text values
+- `integer` - Whole numbers
+- `real` - Decimal numbers
+- `boolean` - True/false values
+- `date` - Date values
+- `datetime` - Date and time values
+
+### Roles
+
+Common roles found in TWB files:
+
+- `measure` - Numeric values that can be aggregated
+- `dimension` - Categorical values used for grouping
+- `filter` - Values used for filtering
+- `parameter` - User-configurable values
