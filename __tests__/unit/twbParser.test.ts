@@ -29,7 +29,6 @@ describe("TWB Parser", () => {
           const fileContent = fs.readFileSync(filePath, "utf-8");
           datasources = await parseTWB(fileContent);
         } catch (error) {
-          console.error(`Error loading file ${fileName}:`, error);
           throw error;
         }
       });
@@ -123,12 +122,6 @@ describe("TWB Parser", () => {
           const parameterColumns = calculationColumns.filter(
             (col) => col["@_param-domain-type"]
           );
-
-          console.log(`\nFile: ${fileName}`);
-          console.log(`Total columns: ${allColumns.length}`);
-          console.log(`Regular columns: ${regularColumns.length}`);
-          console.log(`Calculation columns: ${calculationColumns.length}`);
-          console.log(`Parameter columns: ${parameterColumns.length}`);
 
           // Log a sample of each type if available
           if (regularColumns.length > 0) {

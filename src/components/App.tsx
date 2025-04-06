@@ -9,7 +9,7 @@ import {
 import { Clear } from "@mui/icons-material";
 import React, { useRef } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
-import { NotificationProvider } from "./components/Notification";
+import { NotificationProvider } from "./Notification";
 import { useAppContext } from "./AppContext";
 import FieldsTab from "./FieldsTab";
 import FileUpload from "./FileUpload";

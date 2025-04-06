@@ -125,50 +125,6 @@ describe("TWB Transformer", () => {
           expect(["direct", "indirect"]).toContain(ref.type);
         });
       });
-
-      test("prints summary of transformed data", () => {
-        const nodes = Array.from(result.nodesById.values());
-        const columnNodes = nodes.filter(
-          (node): node is ColumnNode => node.type === "column"
-        );
-        const calculationNodes = nodes.filter(
-          (node): node is CalculationNode => node.type === "calculation"
-        );
-        const parameterNodes = calculationNodes.filter(
-          (node) => node.paramDomainType
-        );
-
-        console.log(`\nFile: ${fileName}`);
-        console.log(`Total nodes: ${nodes.length}`);
-        console.log(`Column nodes: ${columnNodes.length}`);
-        console.log(`Calculation nodes: ${calculationNodes.length}`);
-        console.log(`Parameter nodes: ${parameterNodes.length}`);
-        console.log(`Total references: ${result.references.length}`);
-        console.log(
-          `Direct references: ${
-            result.references.filter((ref) => ref.type === "direct").length
-          }`
-        );
-        console.log(
-          `Indirect references: ${
-            result.references.filter((ref) => ref.type === "indirect").length
-          }`
-        );
-
-        // Log sample nodes
-        if (columnNodes.length > 0) {
-          console.log("\nSample column node:", columnNodes[0]);
-        }
-        if (calculationNodes.length > 0) {
-          const calcSample = calculationNodes.find((n) => n.calculation);
-          if (calcSample) {
-            console.log("\nSample calculation node:", calcSample);
-          }
-        }
-        if (parameterNodes.length > 0) {
-          console.log("\nSample parameter node:", parameterNodes[0]);
-        }
-      });
     });
   });
 

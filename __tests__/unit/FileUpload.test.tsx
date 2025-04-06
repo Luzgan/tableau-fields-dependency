@@ -35,7 +35,6 @@ function readTWBFile(filename: string): string {
   try {
     return fs.readFileSync(filePath, "utf-8");
   } catch (error) {
-    console.error(`Error reading file ${filename}:`, error);
     throw error;
   }
 }
@@ -52,57 +51,10 @@ describe("TWB File Parsing", () => {
       const twbContent = readTWBFile(file);
       const parsedXML = parser.parse(twbContent);
 
-      // Log the overall structure
-      console.log(`\n=== Structure for ${file} ===`);
-      console.log("Top level keys:", Object.keys(parsedXML));
-      console.log("Workbook keys:", Object.keys(parsedXML.workbook));
-      console.log(
-        "Datasources structure:",
-        typeof parsedXML.workbook.datasources
-      );
-
       test("parses XML correctly", () => {
         expect(parsedXML).toBeDefined();
         expect(parsedXML.workbook).toBeDefined();
         expect(parsedXML.workbook.datasources).toBeDefined();
-
-        // Log more details about the structure
-        console.log("\nDetailed structure:");
-        if (parsedXML.workbook.datasources.datasource) {
-          const datasources = parsedXML.workbook.datasources.datasource;
-          if (Array.isArray(datasources)) {
-            console.log(`Number of datasources: ${datasources.length}`);
-            datasources.forEach((ds, idx) => {
-              console.log(`\nDatasource ${idx}:`);
-              console.log("Keys:", Object.keys(ds));
-              console.log("Name:", ds["@_name"]);
-              if (ds.column) {
-                const columns = Array.isArray(ds.column)
-                  ? ds.column
-                  : [ds.column];
-                console.log(`Number of columns: ${columns.length}`);
-                console.log(
-                  "First column structure:",
-                  JSON.stringify(columns[0], null, 2)
-                );
-              }
-            });
-          } else {
-            console.log("Single datasource structure:");
-            console.log("Keys:", Object.keys(datasources));
-            console.log("Name:", datasources["@_name"]);
-            if (datasources.column) {
-              const columns = Array.isArray(datasources.column)
-                ? datasources.column
-                : [datasources.column];
-              console.log(`Number of columns: ${columns.length}`);
-              console.log(
-                "First column structure:",
-                JSON.stringify(columns[0], null, 2)
-              );
-            }
-          }
-        }
       });
 
       test("identifies datasources", () => {
@@ -111,13 +63,9 @@ describe("TWB File Parsing", () => {
         if (Array.isArray(datasources)) {
           datasources.forEach((ds, index) => {
             expect(ds).toBeDefined();
-            console.log(`Datasource ${index}: ${ds["@_name"] || "unnamed"}`);
           });
         } else {
           expect(datasources).toBeDefined();
-          console.log(
-            `Single datasource: ${datasources["@_name"] || "unnamed"}`
-          );
         }
       });
 
@@ -134,9 +82,6 @@ describe("TWB File Parsing", () => {
               expect(col).toBeDefined();
               const name = col["@_name"] || col["@_caption"] || "unnamed";
               const type = col.calculation ? "calculation" : "regular";
-              console.log(
-                `DS ${dsIndex}, Column ${colIndex}: ${name} (${type})`
-              );
             });
           }
         });
@@ -148,62 +93,17 @@ describe("TWB File Parsing", () => {
           ? datasources
           : [datasources];
 
-        console.log("\n=== Calculation Fields Analysis ===");
         dsArray.forEach((ds, dsIndex) => {
-          console.log(
-            `\nAnalyzing datasource ${dsIndex}: ${ds["@_name"] || "unnamed"}`
-          );
-
           if (ds.column) {
             const columns = Array.isArray(ds.column) ? ds.column : [ds.column];
-            console.log(`Total columns in datasource: ${columns.length}`);
 
             const calcColumns = columns.filter(
               (col: Column) => col.calculation
             );
-            console.log(`Number of calculation columns: ${calcColumns.length}`);
-
-            if (calcColumns.length > 0) {
-              console.log("\nFirst calculation column full structure:");
-              console.log(JSON.stringify(calcColumns[0], null, 2));
-            }
 
             calcColumns.forEach((col: Column) => {
               expect(col.calculation).toBeDefined();
-              if (col.calculation?.["@_formula"]) {
-                const formula = col.calculation["@_formula"];
-                console.log("\nAnalyzing calculation:");
-                console.log("Caption:", col["@_caption"]);
-                console.log("Formula type:", typeof formula);
-                console.log("Formula value:", formula);
-
-                if (typeof formula === "string") {
-                  const fieldRefs = formula.match(/\[([^\]]+)\]/g) || [];
-                  console.log(
-                    `Found calculation: ${col["@_caption"] || "unnamed"}`
-                  );
-                  console.log(`Formula: ${formula}`);
-                  console.log(
-                    `Referenced fields: ${fieldRefs
-                      .map((ref: string) => ref.slice(1, -1))
-                      .join(", ")}`
-                  );
-                } else {
-                  console.log(
-                    `Found calculation with non-string formula: ${
-                      col["@_caption"] || "unnamed"
-                    }`
-                  );
-                  console.log(`Formula type: ${typeof formula}`);
-                  console.log(`Formula value:`, formula);
-                }
-              } else {
-                console.log("\nCalculation without formula:");
-                console.log(JSON.stringify(col, null, 2));
-              }
             });
-          } else {
-            console.log("No columns found in datasource");
           }
         });
       });
@@ -246,19 +146,6 @@ describe("Node Parsing", () => {
         return "boolean";
       default:
         return undefined;
-    }
-  };
-
-  const parseAggregation = (agg: string): AggregationType => {
-    switch (agg?.toLowerCase()) {
-      case "sum":
-        return "Sum";
-      case "count":
-        return "Count";
-      case "year":
-        return "Year";
-      default:
-        return "None";
     }
   };
 
