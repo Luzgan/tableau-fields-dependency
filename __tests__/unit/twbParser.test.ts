@@ -122,37 +122,6 @@ describe("TWB Parser", () => {
           const parameterColumns = calculationColumns.filter(
             (col) => col["@_param-domain-type"]
           );
-
-          // Log a sample of each type if available
-          if (regularColumns.length > 0) {
-            console.log("\nSample regular column:", {
-              name: regularColumns[0]["@_name"],
-              datatype: regularColumns[0]["@_datatype"],
-              role: regularColumns[0]["@_role"],
-              aggregation: regularColumns[0]["@_aggregation"],
-            });
-          }
-
-          if (calculationColumns.length > 0) {
-            const calcSample = calculationColumns.find((c) => c.calculation);
-            if (calcSample?.calculation) {
-              console.log("\nSample calculation column:", {
-                name: calcSample["@_name"],
-                datatype: calcSample["@_datatype"],
-                role: calcSample["@_role"],
-                formula: calcSample.calculation["@_formula"],
-              });
-            }
-          }
-
-          if (parameterColumns.length > 0) {
-            console.log("\nSample parameter column:", {
-              name: parameterColumns[0]["@_name"],
-              datatype: parameterColumns[0]["@_datatype"],
-              role: parameterColumns[0]["@_role"],
-              paramDomainType: parameterColumns[0]["@_param-domain-type"],
-            });
-          }
         });
       });
     });
