@@ -32,7 +32,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ fileInputRef }) => {
 
     try {
       const datasources = await parseTWB(file);
-      const transformedData = transformTWBData(datasources, file.name);
+      const transformedData = transformTWBData(datasources);
       const nodes = Array.from(transformedData.nodesById.values());
 
       setFileData(transformedData);

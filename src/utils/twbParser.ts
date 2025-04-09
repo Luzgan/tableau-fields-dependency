@@ -61,14 +61,11 @@ async function getContentFromInput(input: TWBInput): Promise<string> {
 }
 
 /**
- * Parses a TWB file and returns the complete workbook structure
- * Works with both browser File objects and Node.js file contents
+ * Core TWB parsing logic shared between sync and async versions
+ * @internal
  */
-export async function parseTWB(input: TWBInput): Promise<TWBFile> {
+function parseContent(content: string): TWBFile {
   try {
-    // Get content as string
-    const content = await getContentFromInput(input);
-
     // Parse XML
     const result = parser.parse(content);
 
@@ -84,4 +81,23 @@ export async function parseTWB(input: TWBInput): Promise<TWBFile> {
     }
     throw new TWBParseError("Failed to parse TWB file", error);
   }
+}
+
+/**
+ * Parses a TWB file and returns the complete workbook structure
+ * Works with both browser File objects and Node.js file contents
+ */
+export async function parseTWB(input: TWBInput): Promise<TWBFile> {
+  // Get content as string
+  const content = await getContentFromInput(input);
+  return parseContent(content);
+}
+
+/**
+ * Synchronously parses a TWB file from string content
+ * Use this when you have the XML content as a string
+ * For File/Blob/Buffer inputs, use the async parseTWB instead
+ */
+export function parseTWBSync(content: string): TWBFile {
+  return parseContent(content);
 }

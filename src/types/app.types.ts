@@ -1,8 +1,6 @@
-export type NodeType = "column" | "calculation" | "parameter";
+import { ColumnAggregationType, ColumnDataType, ColumnRole } from "./enums";
 
-export type DataType = "string" | "integer" | "real" | "date" | "boolean";
-export type AggregationType = "Sum" | "Count" | "Year" | "None";
-export type Role = "measure" | "dimension";
+export type NodeType = "column" | "calculation" | "parameter" | "internal";
 
 interface BaseNode {
   id: string;
@@ -10,15 +8,14 @@ interface BaseNode {
   type: NodeType;
   caption?: string;
   description?: string;
-  dataType?: DataType;
-  role: Role;
+  dataType: ColumnDataType;
+  role: ColumnRole;
   displayName: string;
 }
 
 export interface ColumnNode extends BaseNode {
   type: "column";
-  aggregation?: AggregationType;
-  defaultFormat?: string;
+  aggregation: ColumnAggregationType;
   precision?: number;
   containsNull?: boolean;
   ordinal?: number;
@@ -29,23 +26,36 @@ export interface ColumnNode extends BaseNode {
 
 export interface ParameterNode extends BaseNode {
   type: "parameter";
-  paramDomainType: "list" | "range" | undefined;
+  paramDomainType: "list" | "range";
+  defaultFormat?: string;
   members?: Array<{
     value: string;
     alias?: string;
   }>;
+  range?: {
+    min: string | number;
+    max: string | number;
+  };
+  aliases?: Record<string, string>;
+  calculation?: {
+    class: "tableau";
+    formula: string;
+  };
 }
 
 export interface CalculationNode extends BaseNode {
   type: "calculation";
-  calculation?: string;
-  paramDomainType?: "list" | "range";
-  class?: "tableau";
-  members?: string[];
-  aliases?: Record<string, string>;
+  defaultFormat?: string;
+  calculation: string;
 }
 
-export type Node = ColumnNode | CalculationNode | ParameterNode;
+export interface InternalNode extends BaseNode {
+  type: "internal";
+  name: `[__tableau_internal_object_id__].${string}`;
+  dataType: ColumnDataType.Table;
+}
+
+export type Node = ColumnNode | CalculationNode | ParameterNode | InternalNode;
 
 export type Reference = {
   sourceId: string;
@@ -55,7 +65,6 @@ export type Reference = {
 };
 
 export interface FileData {
-  filename: string;
   nodesById: Map<string, Node>;
   references: Reference[];
 }

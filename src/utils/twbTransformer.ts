@@ -1,7 +1,8 @@
 import {
-  TWBDatasource,
+  TWBFile,
   isCalculationColumn,
   isParameterColumn,
+  isDataSourceColumn,
 } from "../types/twb.types";
 import {
   FileData,
@@ -11,53 +12,8 @@ import {
   ParameterNode,
   Reference,
 } from "../types/app.types";
-import { DataType, Role, AggregationType } from "../types";
-
-/**
- * Maps TWB data types to our internal DataType
- */
-function mapDataType(twbType: string): DataType {
-  switch (twbType.toLowerCase()) {
-    case "string":
-      return "string";
-    case "integer":
-      return "integer";
-    case "real":
-      return "real";
-    case "date":
-      return "date";
-    case "boolean":
-      return "boolean";
-    default:
-      return "string"; // Default to string for unknown types
-  }
-}
-
-/**
- * Maps TWB roles to our internal Role
- */
-function mapRole(twbRole: string | undefined): Role {
-  if (!twbRole) {
-    throw new Error("Role is required but was not provided");
-  }
-  return twbRole.toLowerCase() === "measure" ? "measure" : "dimension";
-}
-
-/**
- * Maps TWB aggregation to our internal AggregationType
- */
-function mapAggregation(twbAggregation: string): AggregationType {
-  switch (twbAggregation) {
-    case "Sum":
-      return "Sum";
-    case "Count":
-      return "Count";
-    case "Year":
-      return "Year";
-    default:
-      return "None";
-  }
-}
+import { ColumnRole } from "../types/enums";
+import { ensureArray } from "./twbParser";
 
 /**
  * Decodes HTML entities in a string
@@ -147,44 +103,30 @@ function generateNodeId(datasourceName: string, columnName: string): string {
 }
 
 /**
- * Checks if a field name is referenced in a formula
+ * Transforms TWB file into our internal types
  */
-function isFieldReferenced(fieldName: string, formula: string): boolean {
-  // Clean the formula first
-  const cleanedFormula = cleanCalculation(formula);
-
-  // Escape special characters in the field name and create a pattern that matches the field in brackets
-  const escapedName = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`\\[${escapedName}\\]`);
-
-  return pattern.test(cleanedFormula);
-}
-
-/**
- * Transforms TWB datasources into our internal types
- */
-export function transformTWBData(
-  datasources: TWBDatasource[],
-  filename: string
-): FileData {
+export function transformTWBData(twbFile: TWBFile): FileData {
   const nodesById = new Map<string, Node>();
   const references: Reference[] = [];
   const referencedFields = new Set<string>();
 
+  // Get datasources from the workbook
+  const datasources = ensureArray(twbFile.workbook.datasources.datasource);
+
   // First pass: Create all nodes
   datasources.forEach((ds) => {
-    const columns = Array.isArray(ds.column)
-      ? ds.column
-      : ds.column
-      ? [ds.column]
-      : [];
+    const columns = ensureArray(ds.column);
 
     columns.forEach((col) => {
       const id = generateNodeId(ds["@_name"], col["@_name"]);
       const name = col["@_name"] || "";
       const caption = col["@_caption"];
       const displayName = caption || name.replace(/[\[\]]/g, "");
-      const role = mapRole(col["@_role"]); // Will throw if role is missing
+      const role = col["@_role"]?.toLowerCase() as ColumnRole;
+
+      if (!role) {
+        throw new Error("Role is required for all columns");
+      }
 
       if (isParameterColumn(col)) {
         // Create parameter node
@@ -194,51 +136,65 @@ export function transformTWBData(
           displayName,
           type: "parameter",
           caption,
-          dataType: mapDataType(col["@_datatype"]),
+          dataType: col["@_datatype"],
           role,
           paramDomainType: col["@_param-domain-type"],
-          members: col.members?.member?.map((m: any) => ({
-            value: m.value,
-            alias: m.alias,
-          })),
+          defaultFormat: col["@_default-format"],
+          members: col.members?.member
+            ? ensureArray(col.members.member).map((m) => ({
+                value: m["@_value"],
+                alias: m["@_alias"],
+              }))
+            : undefined,
+          range: col.range && {
+            min: col.range["@_min"],
+            max: col.range["@_max"],
+          },
+          aliases: col.aliases?.alias
+            ? ensureArray(col.aliases.alias).reduce(
+                (acc, a) => ({ ...acc, [a["@_key"]]: a["@_value"] }),
+                {}
+              )
+            : undefined,
+          calculation: col.calculation && {
+            class: col.calculation["@_class"],
+            formula: col.calculation["@_formula"],
+          },
         };
         nodesById.set(id, paramNode);
       } else if (isCalculationColumn(col)) {
         // Create calculation node
-        const calculation = decodeHtmlEntities(col.calculation?.["@_formula"]);
         const calcNode: CalculationNode = {
           id,
           name,
           displayName,
           type: "calculation",
           caption,
-          dataType: mapDataType(col["@_datatype"]),
+          dataType: col["@_datatype"],
           role,
-          calculation,
-          class: col.calculation?.["@_class"] as "tableau" | undefined,
+          defaultFormat: col["@_default-format"],
+          calculation: decodeHtmlEntities(col.calculation["@_formula"]),
         };
         nodesById.set(id, calcNode);
 
         // Extract references from calculation
-        if (calcNode.calculation) {
-          const fieldRefs = extractReferences(calcNode.calculation);
-          fieldRefs.forEach(({ ref, matchedText }) => {
-            referencedFields.add(ref);
-            // Check if the reference contains a datasource name
-            const [dsName, fieldName] = ref.split(".");
-            const targetId = fieldName
-              ? generateNodeId(dsName, fieldName) // Datasource-qualified reference
-              : generateNodeId(ds["@_name"], ref); // Simple reference in same datasource
-            const reference: Reference = {
-              sourceId: id,
-              targetId,
-              type: "direct",
-              matchedText,
-            };
-            references.push(reference);
-          });
-        }
-      } else {
+        const fieldRefs = extractReferences(calcNode.calculation);
+        fieldRefs.forEach(({ ref, matchedText }) => {
+          referencedFields.add(ref);
+          // Check if the reference contains a datasource name
+          const [dsName, fieldName] = ref.split(".");
+          const targetId = fieldName
+            ? generateNodeId(dsName, fieldName) // Datasource-qualified reference
+            : generateNodeId(ds["@_name"], ref); // Simple reference in same datasource
+          const reference: Reference = {
+            sourceId: id,
+            targetId,
+            type: "direct",
+            matchedText,
+          };
+          references.push(reference);
+        });
+      } else if (isDataSourceColumn(col)) {
         // Create column node
         const colNode: ColumnNode = {
           id,
@@ -246,10 +202,9 @@ export function transformTWBData(
           displayName,
           type: "column",
           caption,
-          dataType: mapDataType(col["@_datatype"]),
+          dataType: col["@_datatype"],
           role,
-          aggregation: mapAggregation(col["@_aggregation"]),
-          defaultFormat: col["@_default-format"],
+          aggregation: col["@_aggregation"],
           precision: col["@_precision"]
             ? parseInt(col["@_precision"], 10)
             : undefined,
@@ -263,6 +218,7 @@ export function transformTWBData(
         };
         nodesById.set(id, colNode);
       }
+      // Skip internal columns
     });
   });
 
@@ -301,7 +257,6 @@ export function transformTWBData(
   });
 
   return {
-    filename,
     nodesById,
     references: updatedReferences,
   };

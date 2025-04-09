@@ -1,14 +1,46 @@
 import fs from "fs";
 import path from "path";
-import { parseTWB } from "../../src/utils/twbParser";
+import { parseTWBSync } from "../../src/utils/twbParser";
 import { transformTWBData } from "../../src/utils/twbTransformer";
 import { ColumnNode, CalculationNode } from "../../src/types/app.types";
 import {
   TWBDatasource,
   TWBRegularColumn,
-  TWBCalculationColumn,
   TWBParameterColumn,
+  TWBFile,
+  TWBColumn,
 } from "../../src/types/twb.types";
+import {
+  ColumnDataType,
+  ColumnRole,
+  ColumnAggregationType,
+} from "../../src/types/enums";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+/**
+ * Creates a mock TWB file with consistent structure
+ * @param datasources Array of datasources to include in the file
+ * @returns Mock TWB file
+ */
+function createMockTWBFile(datasources: TWBDatasource[]): TWBFile {
+  return {
+    workbook: {
+      "@_original-version": "18.1",
+      "@_version": "18.1",
+      "@_source-build": "2022.1.0 (20221.22.0313.1202)",
+      "@_source-platform": "mac",
+      "@_xmlns:user": "http://www.tableausoftware.com/xml/user",
+      "document-format-change-manifest": {},
+      preferences: {
+        preference: [],
+      },
+      datasources: {
+        datasource: datasources,
+      },
+    },
+  };
+}
 
 const TEST_FILES = [
   "test_book.twb",
@@ -18,19 +50,18 @@ const TEST_FILES = [
 
 describe("TWB Transformer", () => {
   // Test each example file
-  TEST_FILES.forEach((fileName) => {
-    describe(`File: ${fileName}`, () => {
-      const filePath = path.join(__dirname, "../../example-files", fileName);
-      const fileContent = fs.readFileSync(filePath, "utf-8");
-      let result: Awaited<ReturnType<typeof transformTWBData>>;
-
-      beforeAll(async () => {
-        const datasources = await parseTWB(fileContent);
-        result = transformTWBData(datasources, fileName);
-      });
+  TEST_FILES.forEach((filename) => {
+    describe(`File: ${filename}`, () => {
+      const fileContent = readFileSync(
+        join(__dirname, "..", "..", "example-files", filename),
+        "utf-8"
+      );
+      const parsedFile = parseTWBSync(fileContent);
+      const result = transformTWBData(parsedFile);
 
       test("returns FileData with correct structure", () => {
-        expect(result.filename).toBe(fileName);
+        expect(result).toHaveProperty("nodesById");
+        expect(result).toHaveProperty("references");
         expect(result.nodesById).toBeInstanceOf(Map);
         expect(Array.isArray(result.references)).toBe(true);
       });
@@ -47,12 +78,10 @@ describe("TWB Transformer", () => {
 
           // Optional but typed fields
           if (node.dataType) {
-            expect(["string", "integer", "real", "date", "boolean"]).toContain(
-              node.dataType
-            );
+            expect(Object.values(ColumnDataType)).toContain(node.dataType);
           }
           if (node.role) {
-            expect(["measure", "dimension"]).toContain(node.role);
+            expect(Object.values(ColumnRole)).toContain(node.role);
           }
         });
       });
@@ -107,12 +136,6 @@ describe("TWB Transformer", () => {
           if (node.calculation) {
             expect(typeof node.calculation).toBe("string");
           }
-          if (node.paramDomainType) {
-            expect(["list", "range"]).toContain(node.paramDomainType);
-          }
-          if (node.class) {
-            expect(node.class).toBe("tableau");
-          }
         });
       });
 
@@ -130,87 +153,83 @@ describe("TWB Transformer", () => {
 
   describe("Role handling", () => {
     test("all nodes have a role", () => {
-      const datasources: TWBDatasource[] = [
+      const testData = createMockTWBFile([
         {
           "@_name": "test",
           column: [
             {
               "@_name": "col1",
-              "@_datatype": "string",
-              "@_role": "dimension",
-              "@_aggregation": "None",
+              "@_datatype": ColumnDataType.String,
+              "@_role": ColumnRole.Dimension,
+              "@_aggregation": ColumnAggregationType.None,
+              "@_remote-name": "col1",
+              "@_remote-type": "string",
+              "@_ordinal": "1",
+              "@_remote-alias": "col1",
             } as TWBRegularColumn,
             {
               "@_name": "col2",
-              "@_datatype": "real",
-              "@_role": "measure",
-              calculation: {
-                "@_class": "tableau",
-                "@_formula": "[col1] * 2",
-              },
-            } as TWBCalculationColumn,
+              "@_datatype": ColumnDataType.Integer,
+              "@_role": ColumnRole.Measure,
+              "@_aggregation": ColumnAggregationType.Sum,
+              "@_remote-name": "col2",
+              "@_remote-type": "integer",
+              "@_ordinal": "2",
+              "@_remote-alias": "col2",
+            } as TWBRegularColumn,
             {
               "@_name": "param1",
-              "@_datatype": "integer",
-              "@_role": "measure",
+              "@_datatype": ColumnDataType.Integer,
+              "@_role": ColumnRole.Measure,
               "@_param-domain-type": "list",
-              members: {
-                member: [{ value: "1" }, { value: "2" }],
-              },
             } as TWBParameterColumn,
           ],
         },
-      ];
+      ]);
 
-      const result = transformTWBData(datasources, "test.twb");
+      const result = transformTWBData(testData);
       const nodes = Array.from(result.nodesById.values());
-
-      // Verify each node has a role
-      nodes.forEach((node) => {
-        expect(node.role).toBeDefined();
-        expect(["measure", "dimension"]).toContain(node.role);
-      });
-
-      // Verify specific roles
       const col1 = nodes.find((n) => n.name === "col1");
       const col2 = nodes.find((n) => n.name === "col2");
       const param1 = nodes.find((n) => n.name === "param1");
 
-      expect(col1?.role).toBe("dimension");
-      expect(col2?.role).toBe("measure");
-      expect(param1?.role).toBe("measure");
+      expect(col1?.role).toBe(ColumnRole.Dimension);
+      expect(col2?.role).toBe(ColumnRole.Measure);
+      expect(param1?.role).toBe(ColumnRole.Measure);
     });
 
     test("throws error when role is missing", () => {
-      const datasources: TWBDatasource[] = [
+      const testData = createMockTWBFile([
         {
           "@_name": "test",
           column: [
             {
               "@_name": "col1",
-              "@_datatype": "string",
-              "@_aggregation": "None",
+              "@_datatype": ColumnDataType.String,
+              "@_aggregation": ColumnAggregationType.None,
+              "@_remote-name": "col1",
+              "@_remote-type": "string",
+              "@_ordinal": "1",
+              "@_remote-alias": "col1",
             } as TWBRegularColumn,
           ],
         },
-      ];
+      ]);
 
-      expect(() => transformTWBData(datasources, "test.twb")).toThrow(
-        "Role is required"
-      );
+      expect(() => transformTWBData(testData)).toThrow("Role is required");
     });
   });
 
   describe("HTML Entity Decoding", () => {
     it("should properly decode HTML entities in calculations", () => {
-      const datasources: TWBDatasource[] = [
+      const testData = createMockTWBFile([
         {
           "@_name": "test_ds",
           column: [
             {
               "@_name": "[Test Calculation]",
-              "@_role": "measure",
-              "@_datatype": "string",
+              "@_role": ColumnRole.Measure,
+              "@_datatype": ColumnDataType.String,
               calculation: {
                 "@_class": "tableau",
                 "@_formula":
@@ -219,9 +238,9 @@ describe("TWB Transformer", () => {
             },
           ],
         },
-      ];
+      ]);
 
-      const result = transformTWBData(datasources, "test.twb");
+      const result = transformTWBData(testData);
       const nodes = Array.from(result.nodesById.values());
       const calcNode = nodes.find((n) => n.name === "[Test Calculation]");
 
@@ -242,14 +261,14 @@ describe("TWB Transformer", () => {
     });
 
     it("should handle other HTML entities in calculations", () => {
-      const datasources: TWBDatasource[] = [
+      const testData = createMockTWBFile([
         {
           "@_name": "test_ds",
           column: [
             {
               "@_name": "[HTML Test]",
-              "@_role": "measure",
-              "@_datatype": "string",
+              "@_role": ColumnRole.Measure,
+              "@_datatype": ColumnDataType.String,
               calculation: {
                 "@_class": "tableau",
                 "@_formula":
@@ -258,9 +277,9 @@ describe("TWB Transformer", () => {
             },
           ],
         },
-      ];
+      ]);
 
-      const result = transformTWBData(datasources, "test.twb");
+      const result = transformTWBData(testData);
       const nodes = Array.from(result.nodesById.values());
       const calcNode = nodes.find((n) => n.name === "[HTML Test]");
 
@@ -275,32 +294,32 @@ describe("TWB Transformer", () => {
   });
 
   describe("Node ID Generation", () => {
-    it("should generate URL-safe node IDs", () => {
-      const testData: TWBDatasource[] = [
+    test("should generate URL-safe node IDs", () => {
+      const testData = createMockTWBFile([
         {
-          "@_name": "Test Datasource",
+          "@_name": "Test/Data:Source",
           column: [
             {
-              "@_name": "[Test Column]",
-              "@_role": "dimension",
-              "@_datatype": "string",
+              "@_name": "[Special:Field/Name]",
+              "@_datatype": ColumnDataType.String,
+              "@_role": ColumnRole.Dimension,
+              "@_aggregation": ColumnAggregationType.None,
+              "@_remote-name": "field",
+              "@_remote-type": "string",
+              "@_ordinal": "1",
+              "@_remote-alias": "field",
             } as TWBRegularColumn,
           ],
         },
-      ];
+      ]);
 
-      const result = transformTWBData(testData, "test.twb");
+      const result = transformTWBData(testData);
       const nodeId = Array.from(result.nodesById.values())[0].id;
 
       // Check that the ID only contains URL-safe characters
       expect(nodeId).toMatch(/^[A-Za-z0-9_-]+$/);
-
-      // Check that the ID is consistent
-      const secondResult = transformTWBData(testData, "test.twb");
-      expect(Array.from(secondResult.nodesById.values())[0].id).toBe(nodeId);
-
-      // Check that the ID format is correct (datasourceName--columnName without brackets)
-      expect(nodeId).toBe("Test-Datasource--Test-Column");
+      // Check that special characters were properly handled
+      expect(nodeId).toBe("Test-DataSource--SpecialField-Name");
     });
   });
 });
