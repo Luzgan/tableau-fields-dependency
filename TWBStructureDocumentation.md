@@ -2,758 +2,164 @@
 
 ## Overview
 
-A Tableau workbook (.twb) file is an XML document that contains definitions for data sources, calculated fields, parameters, and other workbook elements. This document outlines the key structures found in TWB files.
+A Tableau workbook (.twb) file is an XML document that contains definitions for data sources, calculated fields, parameters, and other workbook elements. This document outlines the key structures we handle in our parser.
 
 ## Root Structure
 
-A Tableau workbook file follows this XML structure:
-
 ```xml
-<?xml version='1.0' encoding='utf-8' ?>
-<workbook original-version='18.1' source-build='...' source-platform='...' version='18.1' xmlns:user='...'>
-  <!-- Document format changes -->
-  <document-format-change-manifest>
-    <feature1 />
-    <feature2 />
-    <!-- ... -->
-  </document-format-change-manifest>
-
-  <!-- Optional repository location -->
-  <repository-location derived-from='...' id='...' path='...' revision='...' />
-
-  <!-- UI preferences -->
-  <preferences>
-    <preference name='...' value='...' />
-  </preferences>
-
-  <!-- Optional styles -->
-  <style>
-    <style-rule element='...'>
-      <format attr='...' value='...' />
-    </style-rule>
-  </style>
-
-  <!-- Data sources section - always present -->
+<workbook>
   <datasources>
-    <datasource name='...' version='18.1'>
+    <datasource name="...">
       <!-- Datasource content -->
     </datasource>
-    <!-- More datasources... -->
   </datasources>
-
-  <!-- Other workbook elements... -->
 </workbook>
 ```
 
-### Required Workbook Attributes
+## Column Types and Their Handling
 
-- `original-version` - Original version of Tableau that created the workbook
-- `version` - Current version of the workbook
-- `source-build` - Build number of Tableau that last modified the workbook
-- `source-platform` - Platform where the workbook was last modified (win/mac)
+### 1. Parameters
 
-### Optional Workbook Attributes
+- Found in datasource named "Parameters"
+- Structure:
+  ```xml
+  <column name="[Parameter Name]" datatype="..." role="...">
+    <calculation formula="..."/>
+  </column>
+  ```
+- Attributes we track:
+  - name (wrapped in [])
+  - caption
+  - role
+  - datatype
 
-- `xml:base` - Base URL for the workbook
-- `include-phone-layouts` - Whether phone layouts are included
-- `xmlns:user` - XML namespace for user elements
+### 2. Calculations
 
-### Required Sections
+- Can be in any datasource
+- Structure:
+  ```xml
+  <column name="[Calculation Name]" datatype="..." role="...">
+    <calculation formula="..."/>
+  </column>
+  ```
+- Attributes we track:
+  - name (wrapped in [])
+  - caption
+  - role
+  - datatype
+  - formula (from calculation tag)
 
-1. `<document-format-change-manifest>` - List of format changes and features
-2. `<preferences>` - UI and workbook preferences
-3. `<datasources>` - Data source definitions
+### 3. Data Source Fields
 
-### Optional Sections
+These are the most complex as they can be defined in multiple ways (and usually are repeated) in the TWB file:
 
-1. `<repository-location>` - Information about workbook location in repository
-2. `<style>` - Workbook style definitions
-
-## Column Types
-
-Tableau workbooks contain several types of columns:
-
-1. **Data Source Fields** - Regular columns from the data source
-
-   - Have source metadata (`remote-name`, `remote-type`, etc.)
-   - Always have an aggregation type
-
-2. **Calculated Fields** - User-defined calculations
-
-   - Have a calculation formula
-   - No source metadata
-
-3. **Parameters** - User-configurable values
-
-   - Have domain type (list or range)
-   - Can have members or range bounds
-
-4. **Internal Columns** - Used by Tableau internally
-   - Names always start with `[__tableau_internal_object_id__]`
-   - Have datatype "table"
-   - Used for internal object tracking
-   - Should be ignored for field dependency analysis
-
-## Relation Structure
-
-Columns in a datasource are defined within a relation structure:
+#### a. Column Mappings (ds.connection.cols.map)
 
 ```xml
-<datasource name="My Datasource">
-  <connection>
-    <relation>
-      <columns>
-        <column datatype="string" name="Region" ordinal="3" />
-        <!-- More columns -->
-      </columns>
-    </relation>
-  </connection>
-  <metadata-records>
-    <!-- Column metadata -->
-  </metadata-records>
-</datasource>
+<connection>
+  <cols>
+    <map key="[Field Name]" value="[Relation].[Field]"/>
+  </cols>
+</connection>
 ```
 
-The structure is:
+- Maps a field name to a column in a relation
+- Used when fields are renamed or transformed
+- Example: `[Orders].[Customer Name] -> [Customer]`
 
-1. Datasource contains:
-   - Connection information
-   - Relation structure
-   - Metadata records
-2. Relation contains:
-   - Column definitions
-   - Join information (if applicable)
-3. Columns contain:
-   - Basic information (name, datatype, ordinal)
-   - Additional metadata is in metadata-records
-
-## Metadata Records
-
-Each column can have associated metadata:
+#### b. Direct Relation Columns (ds.connection.relation.columns.column)
 
 ```xml
-<metadata-record class="column">
-  <remote-name>Region</remote-name>
-  <remote-type>130</remote-type>
-  <local-name>[Region]</local-name>
-  <parent-name>[My Datasource]</parent-name>
-  <remote-alias>Region</remote-alias>
-  <ordinal>3</ordinal>
-  <local-type>string</local-type>
-  <aggregation>Count</aggregation>
-  <contains-null>true</contains-null>
-  <collation flag="1" name="LEN_RUS_S2" />
-  <attributes>
-    <attribute datatype="string" name="DebugRemoteType">"WSTR"</attribute>
-  </attributes>
-</metadata-record>
+<relation>
+  <columns>
+    <column name="Field Name" datatype="..."/>
+  </columns>
+</relation>
 ```
 
-## Data Types
+- Original columns from the data source
+- Contains basic info: name and datatype
+- Names need to be wrapped in [] when used
+- Role is determined by datatype
 
-Tableau supports various data types for columns:
-
-- `string`: Text data
-- `integer`: Whole numbers
-- `real`: Decimal numbers
-- `boolean`: True/false values
-- `date`: Date values
-- `datetime`: Date and time values
-- `spatial`: Geographic data
-
-## Recognition Rules
-
-### How to Identify Internal Columns
-
-1. Name Pattern:
-
-   - Always starts with `[__tableau_internal_object_id__]`
-   - Example: `[__tableau_internal_object_id__].1`
-
-2. XML Structure:
-
-   - Simple `<column>` element
-   - No `<calculation>` element
-   - No `<members>` or `<range>` elements
-
-3. Unique Attributes:
-   - Always has datatype="table"
-   - No remote-name or remote-type attributes
-   - No aggregation attribute
-
-Example:
+#### c. Metadata Records (ds.connection["metadata-records"]["metadata-record"])
 
 ```xml
-<column datatype="table"
-        name="[__tableau_internal_object_id__].1"
-        role="dimension">
-</column>
+<metadata-records>
+  <metadata-record class="column">
+    <local-name>Field Name</local-name>
+    <local-type>...</local-type>
+  </metadata-record>
+</metadata-records>
 ```
 
-### How to Identify Parameters
+- Additional metadata about columns
+- Class "column" contains type information
+- Can override or supplement existing column info
 
-1. Name Pattern:
-
-   - Always starts with `[Parameters].`
-   - Example: `[Parameters].[Parameter Name]`
-
-2. XML Structure:
-
-   - Has `param-domain-type` attribute
-   - Usually contains a `<calculation>` element with default value
-   - May contain `<members>` for list parameters
-
-3. Unique Attributes:
-   - Must have `param-domain-type` (e.g., "list", "range")
-   - Often has `allowable-values` attribute
-
-Example:
+#### d. Direct Datasource Columns (ds.column)
 
 ```xml
-<column caption="Year Parameter"
-        datatype="integer"
-        name="[Parameters].[Year]"
-        param-domain-type="range"
-        role="measure"
-        type="quantitative">
-  <calculation class="tableau" formula="2023"/>
-  <range max="2025" min="2020" />
-</column>
+<column name="[Field Name]" datatype="..." role="..."/>
 ```
 
-### How to Identify Calculated Fields
+- User modifications to original columns
+- Can contain: caption, name, role, datatype
+- Used for field customizations
 
-1. XML Structure:
+### Processing Order for Data Source Fields
 
-   - Always has a `<calculation>` child element
-   - The `<calculation>` element has a non-empty `formula` attribute
-   - Does NOT have `param-domain-type` attribute
+1. First read from relations
+2. Then apply column mappings
+3. Then apply metadata records
+4. Finally apply direct column modifications (user changes)
 
-2. Formula Characteristics:
+## Field References in Calculations
 
-   - Contains references to other fields in square brackets
-   - May contain functions, operators, or conditional logic
-   - Often includes mathematical or logical operations
+### Reference Format
 
-3. Unique Attributes:
-   - Has `class="tableau"` in the calculation element
-   - Formula references other fields or parameters
+- Simple: `[Field Name]`
+- With datasource: `[Datasource].[Field Name]`
 
-Example:
+### Special Cases in Formula Parsing
 
-```xml
-<column datatype="real"
-        name="[Profit Ratio]"
-        role="measure"
-        type="quantitative">
-  <calculation class="tableau"
-              formula="[Profit]/[Sales]"/>
-</column>
-```
+1. Comments:
 
-### How to Identify Data Source Fields
+   - Single-line: `// comment`
+   - Multi-line: `/* comment */`
 
-1. XML Structure:
+2. Quoted Strings:
 
-   - Simple `<column>` element
-   - No `<calculation>` child element
-   - Often has `<remote-name>` and `<local-name>`
+   - Single quotes: `'string'`
+   - Double quotes: `"string"`
+   - Can span multiple lines
+   - Can contain escaped quotes: `\'` and `\"`
 
-2. Unique Attributes:
+3. Processing Order:
 
-   - Has `remote-type` and `local-type`
-   - Contains `remote-alias` matching the source data
-   - Often has `ordinal` attribute indicating column position
+   1. Remove all comments
+   2. Remove all quoted strings
+   3. Parse remaining text for field references
 
-3. Additional Characteristics:
-   - Usually found within `<relation>/<columns>` structure
-   - Has source database metadata
-   - Contains attributes about the original data source
+4. Edge Cases:
+   - Field names can contain spaces and special characters
+   - Field names are case-sensitive
+   - References can appear multiple times
+   - References can be part of larger expressions
 
-Example:
+## Exceptions We Handle
 
-```xml
-<column>
-  <remote-name>Sales</remote-name>
-  <remote-type>131</remote-type>
-  <local-name>[Sales]</local-name>
-  <parent-name>[Data Source]</parent-name>
-  <remote-alias>Sales</remote-alias>
-  <ordinal>5</ordinal>
-  <local-type>real</local-type>
-  <aggregation>Sum</aggregation>
-  <contains-null>true</contains-null>
-</column>
-```
+### Pivot Relations
 
-## Quick Reference Table
+- If a datasource has a relation with `type="pivot"`, we ignore that datasource
 
-| Feature             | Parameter               | Calculated Field        | Data Source Field        |
-| ------------------- | ----------------------- | ----------------------- | ------------------------ |
-| Name Pattern        | `[Parameters].*`        | Any valid name          | Matches source column    |
-| Has `<calculation>` | Yes (default value)     | Yes (formula)           | No                       |
-| Special Attributes  | `param-domain-type`     | `class="tableau"`       | `remote-type`, `ordinal` |
-| Formula Type        | Simple default value    | Complex expressions     | None                     |
-| Location            | Top level in datasource | Any worksheet/dashboard | Within relation columns  |
-| References          | Standalone              | Other fields/parameters | Original data source     |
+### Role Determination
 
-## Formula Patterns
+Default role based on datatype:
 
-### Parameter Formulas
-
-1. Simple Default Values:
-
-   - Single literal value: `"2023"`, `"Default"`, `1.0`
-   - No calculations or field references
-   - Often wrapped in quotes for strings
-
-2. Parameter References in Other Formulas:
-   - Referenced as: `[Parameters].[Parameter Name]`
-   - Used in conditions: `IF [Parameters].[Year] = 2023 THEN...`
-   - Used in calculations: `[Value] * [Parameters].[Multiplier]`
-
-### Calculated Field Formulas
-
-1. Mathematical Operations:
-
-   ```
-   [Revenue] / [Units]
-   SUM([Sales]) / SUM([Quantity])
-   [Price] * [Quantity] * (1 - [Discount])
-   ```
-
-2. Conditional Logic:
-
-   ```
-   IF [Sales] > 1000 THEN "High" ELSE "Low" END
-   CASE [Category]
-     WHEN "A" THEN 1
-     WHEN "B" THEN 2
-     ELSE 0
-   END
-   ```
-
-3. Date Functions:
-
-   ```
-   DATEADD('month', 1, [Order Date])
-   DATEDIFF('day', [Start Date], [End Date])
-   DATETRUNC('quarter', [Date])
-   ```
-
-4. Aggregations:
-   ```
-   SUM([Quantity]) / WINDOW_SUM(SUM([Quantity]))
-   RUNNING_AVG(SUM([Sales]))
-   {FIXED [Category] : SUM([Sales])}
-   ```
-
-### Data Source Field References
-
-1. Direct References:
-
-   - Simple field name: `[Field Name]`
-   - No calculations or transformations
-   - Used in source queries and joins
-
-2. Metadata References:
-   ```xml
-   <remote-name>Field Name</remote-name>
-   <local-name>[Field Name]</local-name>
-   <remote-alias>Field Name</remote-alias>
-   ```
-
-## Field Type Decision Tree
-
-To determine field type, follow these steps:
-
-1. Check the name:
-
-   - If starts with `[Parameters].` → Parameter
-   - Otherwise, continue to step 2
-
-2. Look for `<calculation>` element:
-
-   - If absent → Data Source Field
-   - If present, continue to step 3
-
-3. Check for `param-domain-type`:
-
-   - If present → Parameter
-   - If absent → Calculated Field
-
-4. Examine formula complexity:
-   - Simple literal → Likely Parameter
-   - Complex expression → Calculated Field
-   - No formula → Data Source Field
-
-## 1. Data Source Fields
-
-### Location
-
-Data source fields are defined within the `<datasources>` section, under individual `<datasource>` elements.
-
-### Structure
-
-```xml
-<datasources>
-  <datasource name="Source Name">
-    <connection>
-      <relation>
-        <columns>
-          <column>
-            <!-- Field definition -->
-          </column>
-        </columns>
-      </relation>
-    </connection>
-  </datasource>
-</datasources>
-```
-
-### Required Attributes
-
-- `name` - The name of the field
-- `datatype` - The data type (e.g., real, string, integer)
-- `role` - The field's role (e.g., measure, dimension)
-- `type` - The type of field (e.g., quantitative, nominal)
-
-### Optional Attributes
-
-- `caption` - Display name for the field
-- `aggregation` - Default aggregation (Sum, Avg, etc.)
-- `precision` - For numeric fields
-- `scale` - For decimal numbers
-- `semantic-role` - Special semantic meaning (e.g., [City].[Name])
-
-## 2. Calculated Fields
-
-### Location
-
-Calculated fields appear as `<column>` elements with a `<calculation>` child element.
-
-### Structure
-
-```xml
-<column datatype="type" name="[Calculated Field Name]" role="measure/dimension" type="quantitative/nominal">
-  <calculation class="tableau" formula="calculation formula">
-    <!-- Formula definition -->
-  </calculation>
-</column>
-```
-
-### Required Attributes
-
-- `name` - The name of the calculated field
-- `datatype` - The resulting data type
-- `formula` - The calculation formula
-- `class` - Usually "tableau"
-
-### Optional Attributes
-
-- `caption` - Display name
-- `role` - Measure or dimension
-- `type` - Quantitative or nominal
-
-## 3. Parameters
-
-### Location
-
-Parameters are defined in the `<datasources>` section as special `<column>` elements with parameter attributes.
-
-### Structure
-
-```xml
-<column caption="Parameter Name" datatype="type" name="[Parameters].[Parameter Name]" param-domain-type="domain" role="measure/dimension" type="quantitative/nominal">
-  <calculation class="tableau" formula="parameter formula"/>
-</column>
-```
-
-### Required Attributes
-
-- `name` - Must start with [Parameters].
-- `datatype` - The parameter's data type
-- `param-domain-type` - The type of domain (list, range, etc.)
-
-### Optional Attributes
-
-- `caption` - Display name
-- `role` - Measure or dimension
-- `type` - Quantitative or nominal
-
-## Common Data Types
-
-- `real` - Floating point numbers
-- `integer` - Whole numbers
-- `string` - Text values
-- `boolean` - True/false values
-- `date` - Date values
-
-## Common Roles
-
-- `measure` - Numeric values that can be aggregated
-- `dimension` - Categorical or grouping values
-
-## Notes
-
-1. Fields can have additional metadata like formatting, aliases, and comments
-2. Calculated fields can reference other fields and parameters
-3. Parameters can have default values and allowable ranges
-4. Field names in formulas are typically enclosed in square brackets
-5. Aggregation attributes determine how measures are combined (SUM, AVG, etc.)
-
-## Common Patterns and Edge Cases
-
-### Parameter Patterns
-
-1. Common Use Cases:
-
-   - Date/Time selectors
-   - Filter values
-   - Calculation toggles
-   - Display options
-
-2. Typical Structures:
-
-   ```xml
-   <!-- List Parameter -->
-   <column name="[Parameters].[Category Filter]" param-domain-type="list">
-     <members>
-       <member value="All"/>
-       <member value="Electronics"/>
-       <member value="Furniture"/>
-     </members>
-   </column>
-
-   <!-- Range Parameter -->
-   <column name="[Parameters].[Year Selector]" param-domain-type="range">
-     <range min="2020" max="2025"/>
-   </column>
-   ```
-
-### Calculated Field Patterns
-
-1. Common Use Cases:
-
-   - Ratios and percentages
-   - Running totals
-   - Custom groupings
-   - Date calculations
-
-2. Typical Structures:
-
-   ```xml
-   <!-- Ratio Calculation -->
-   <column name="[Profit Ratio]">
-     <calculation formula="SUM([Profit])/SUM([Sales])"/>
-   </column>
-
-   <!-- Complex Conditional -->
-   <column name="[Performance Category]">
-     <calculation formula="
-       CASE
-         WHEN [Sales] > [Target] * 1.1 THEN 'Exceeding'
-         WHEN [Sales] >= [Target] THEN 'Meeting'
-         ELSE 'Below'
-       END
-     "/>
-   </column>
-   ```
-
-### Data Source Field Patterns
-
-1. Common Use Cases:
-
-   - Raw data columns
-   - Database fields
-   - Joined table columns
-
-2. Typical Structures:
-
-   ```xml
-   <!-- Numeric Field -->
-   <column>
-     <remote-name>Revenue</remote-name>
-     <remote-type>131</remote-type>
-     <local-type>real</local-type>
-     <aggregation>Sum</aggregation>
-   </column>
-
-   <!-- Dimension Field -->
-   <column>
-     <remote-name>Category</remote-name>
-     <remote-type>129</remote-type>
-     <local-type>string</local-type>
-     <aggregation>None</aggregation>
-   </column>
-   ```
-
-### Edge Cases
-
-1. Calculated Parameters
-
-   - Parameters that use calculations for default values
-   - Still identified by `param-domain-type` attribute
-
-   ```xml
-   <column name="[Parameters].[Current Year]" param-domain-type="range">
-     <calculation formula="YEAR(TODAY())"/>
-   </column>
-   ```
-
-2. Hybrid Fields
-
-   - Calculated fields that look like parameters
-   - Distinguished by lack of `param-domain-type`
-
-   ```xml
-   <column name="[Year]">
-     <calculation formula="YEAR([Date])"/>
-   </column>
-   ```
-
-3. Aliased Source Fields
-   - Data source fields with calculations
-   - Have both `remote-name` and `calculation`
-   ```xml
-   <column>
-     <remote-name>Status</remote-name>
-     <calculation formula="UPPER([Status])"/>
-   </column>
-   ```
-
-### Best Practices for Identification
-
-1. Always Check Multiple Attributes:
-
-   - Don't rely on name alone
-   - Verify presence of key attributes
-   - Check parent element structure
-
-2. Follow the Decision Tree:
-
-   - Start with name pattern
-   - Check for calculations
-   - Verify domain type
-   - Examine formula complexity
-
-3. Consider Context:
-   - Location in workbook
-   - Relationship to other fields
-   - Usage in visualizations
-
-## Attribute Distribution
-
-### Common Attributes (All Field Types)
-
-These attributes appear in all types of fields (data source, calculated, and parameters):
-
-- `name` - The identifier of the field
-- `datatype` - The data type (string, integer, real, etc.)
-- `role` - The role in visualizations (measure/dimension)
-- `caption` - Display name (optional)
-
-### Data Source Field Specific Attributes
-
-These attributes only appear in data source fields:
-
-- `remote-name` - Original name from the data source
-- `remote-type` - Original data type from the source
-- `remote-alias` - Alias in the data source
-- `ordinal` - Position in the source table
-- `aggregation` - Default aggregation type
-- `precision` - Numeric precision for numbers
-- `contains-null` - Whether nulls are allowed
-- `local-type` - Local data type representation
-
-### Calculated Field Specific Attributes
-
-These attributes are specific to calculated fields:
-
-- `default-format` - Display format for the result
-- `calculation/formula` - The calculation expression
-- `calculation/class` - Always "tableau"
-
-### Parameter Specific Attributes
-
-These attributes only appear in parameters:
-
-- `param-domain-type` - Type of parameter (list/range)
-- `members` - List of allowed values (for list parameters)
-- `range` - Min/max values (for range parameters)
-- `aliases` - Display values for parameter options
-
-#### Parameter Patterns
-
-Common parameter patterns found in TWB files:
-
-1. **Simple List Parameters**
-
-   ```xml
-   <column datatype='string' name='[SimpleParam]' param-domain-type='list'>
-     <members>
-       <member value='value1' />
-       <member value='value2' />
-     </members>
-   </column>
-   ```
-
-2. **Aliased List Parameters**
-
-   ```xml
-   <column datatype='string' name='[AliasedParam]' param-domain-type='list'>
-     <aliases>
-       <alias key='value1' value='Display Name 1' />
-       <alias key='value2' value='Display Name 2' />
-     </aliases>
-     <members>
-       <member alias='Display Name 1' value='value1' />
-       <member alias='Display Name 2' value='value2' />
-     </members>
-   </column>
-   ```
-
-3. **Boolean Parameters**
-
-   ```xml
-   <column datatype='boolean' name='[BoolParam]' param-domain-type='list'>
-     <members>
-       <member value='true' />
-       <member value='false' />
-     </members>
-   </column>
-   ```
-
-4. **Range Parameters**
-   ```xml
-   <column datatype='integer' name='[RangeParam]' param-domain-type='range'>
-     <range min='0' max='100' />
-   </column>
-   ```
-
-### Data Types
-
-Common data types found in TWB files:
-
-- `string` - Text values
-- `integer` - Whole numbers
-- `real` - Decimal numbers
-- `boolean` - True/false values
-- `date` - Date values
-- `datetime` - Date and time values
-
-### Roles
-
-Common roles found in TWB files:
-
-- `measure` - Numeric values that can be aggregated
-- `dimension` - Categorical values used for grouping
-
-## Type Definitions
-
-The TypeScript type definitions for TWB (Tableau Workbook) file structures can be found in [`src/types/twb.types.ts`](src/types/twb.types.ts). This file contains interfaces and type guards for:
-
-- Column types (regular, calculated, parameter)
-- Datasource structures
-- Workbook metadata
-- Helper functions for type checking
+- integer: measure
+- real: measure
+- string: dimension
+- date: dimension
+- datetime: dimension
+- boolean: dimension
