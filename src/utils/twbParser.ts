@@ -4,9 +4,10 @@ import { XMLParser } from "fast-xml-parser";
 // Configure parser with the same options as in FileUpload.tsx
 const parser = new XMLParser({
   ignoreAttributes: false,
-  attributeNamePrefix: "@_",
+  attributeNamePrefix: "",
   allowBooleanAttributes: true,
   preserveOrder: false,
+  htmlEntities: true,
 });
 
 /**

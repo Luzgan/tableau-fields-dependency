@@ -1,105 +1,208 @@
-import {
-  TWBFile,
-  isCalculationColumn,
-  isParameterColumn,
-  isDataSourceColumn,
-} from "../types/twb.types";
+import { TWBFile, getDefaultRoleForDatatype } from "../types/twb.types";
 import {
   FileData,
   Node,
-  ColumnNode,
+  DatasourceNode,
   CalculationNode,
   ParameterNode,
   Reference,
 } from "../types/app.types";
-import { ColumnRole } from "../types/enums";
+import { ColumnDataType, ColumnRole } from "../types/enums";
 import { ensureArray } from "./twbParser";
 
 /**
- * Decodes HTML entities in a string
+ * Converts string datatype to ColumnDataType enum
  */
-function decodeHtmlEntities(text: string): string {
-  if (!text) return text;
-
-  // First, handle combined entities like &#13;&#10;
-  text = text.replace(/&#13;&#10;/g, "\r\n");
-
-  // Then handle individual numeric entities
-  text = text.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
-
-  // Finally handle named entities
-  const entities: { [key: string]: string } = {
-    "&lt;": "<",
-    "&gt;": ">",
-    "&amp;": "&",
-    "&quot;": '"',
-    "&apos;": "'",
-  };
-
-  return text.replace(/&[a-z]+;/g, (match) => entities[match] || match);
+function convertDataType(datatype: string): ColumnDataType {
+  switch (datatype.toLowerCase()) {
+    case "string":
+      return ColumnDataType.String;
+    case "integer":
+      return ColumnDataType.Integer;
+    case "real":
+      return ColumnDataType.Real;
+    case "boolean":
+      return ColumnDataType.Boolean;
+    case "date":
+      return ColumnDataType.Date;
+    case "datetime":
+      return ColumnDataType.DateTime;
+    case "spatial":
+      return ColumnDataType.Spatial;
+    case "table":
+      return ColumnDataType.Table;
+    default:
+      return ColumnDataType.String;
+  }
 }
 
 /**
- * Cleans a calculation formula by removing comments
+ * Converts string role to ColumnRole enum
  */
-function cleanCalculation(formula: string): string {
-  if (!formula) return formula;
+function convertRole(role: string): ColumnRole {
+  switch (role.toLowerCase()) {
+    case "measure":
+      return ColumnRole.Measure;
+    case "dimension":
+      return ColumnRole.Dimension;
+    default:
+      return ColumnRole.Dimension;
+  }
+}
 
-  // Remove single-line comments
-  const commentRegex = /\/\/.*?[\r\n]/gm;
-  return formula.replace(commentRegex, "");
+/**
+ * Generates a unique ID for a node
+ */
+export function generateNodeId(
+  datasourceName: string,
+  columnName: string
+): string {
+  // Clean up datasource name
+  const safeDatasourceName = datasourceName
+    .replace(/[\s\/\{\}\(\)]+/g, "-")
+    .replace(/[^a-zA-Z0-9\-_]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  // Clean up column name - remove brackets and make URL-safe
+  const safeColumnName = columnName
+    .replace(/[\[\]]/g, "")
+    .replace(/[\s\/\{\}\(\)]+/g, "-")
+    .replace(/[^a-zA-Z0-9\-_]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return `${safeDatasourceName}--${safeColumnName}`;
+}
+
+/**
+ * Parses a reference string into its components
+ * Examples:
+ * - "[Datasource].[Field]" -> { datasource: "Datasource", field: "Field" }
+ * - "[Field]" -> { field: "Field" }
+ */
+function parseReference(ref: string): { datasource?: string; field: string } {
+  const match = ref.match(/^\[([^\]]+)\]\.\[([^\]]+)\]$|^\[([^\]]+)\]$/);
+  if (!match) {
+    throw new Error(`Invalid reference format: ${ref}`);
+  }
+
+  if (match[1] && match[2]) {
+    // Datasource-qualified reference [Datasource].[Field]
+    return {
+      datasource: match[1],
+      field: match[2],
+    };
+  } else if (match[3]) {
+    // Simple reference [Field]
+    return {
+      field: match[3],
+    };
+  }
+
+  throw new Error(`Invalid reference format: ${ref}`);
 }
 
 /**
  * Extracts field references from a calculation formula
  */
-function extractReferences(
+export function extractReferences(
   formula: string
-): { ref: string; matchedText: string }[] {
-  // Clean the formula first
-  const cleanedFormula = cleanCalculation(formula);
+): { datasource?: string; field: string; matchedText: string }[] {
+  const refs = [];
 
-  // Match field references like [Field Name] or [Datasource].[Field Name]
-  const fieldPattern = /\[([^\]]+)\]|\[([^\]]+)\]\.\[([^\]]+)\]/g;
-  const refs = new Map<string, string>();
+  // First remove all comments (both single-line and multiline)
+  const withoutComments = formula
+    .replace(/\/\*[\s\S]*?\*\//g, "") // Remove multiline comments /* ... */
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("//"))
+    .join("\n");
 
-  // Store unique references with their full matched text (including brackets)
-  for (const match of cleanedFormula.matchAll(fieldPattern)) {
-    if (match[1]) {
-      // Simple field reference [Field Name]
-      refs.set(match[1], match[0]);
-    } else if (match[2] && match[3]) {
-      // Datasource-qualified field reference [Datasource].[Field Name]
-      refs.set(`${match[2]}.${match[3]}`, match[0]);
-    }
+  // Then remove all quoted strings (both single and double quotes)
+  const withoutQuotes = withoutComments
+    .replace(/"[^"\\]*(\\.[^"\\]*)*"/gs, "") // Remove double quoted strings, including multiline
+    .replace(/'[^'\\]*(\\.[^'\\]*)*'/gs, ""); // Remove single quoted strings, including multiline
+
+  // Now parse the cleaned text for field references
+  const fieldPattern = /\[[^\]]+\]\.\[[^\]]+\]|\[[^\]]+\]/g;
+  let match;
+
+  while ((match = fieldPattern.exec(withoutQuotes)) !== null) {
+    const refComponents = parseReference(match[0]);
+    refs.push({
+      ...refComponents,
+      matchedText: match[0],
+    });
   }
 
-  return Array.from(refs.entries()).map(([ref, matchedText]) => ({
-    ref,
-    matchedText,
-  }));
+  return refs;
 }
 
 /**
- * Generates a unique ID for a node by making datasourceName--columnName URL-safe
+ * Finds a relation by name in the datasource, recursively searching through nested relations
  */
-function generateNodeId(datasourceName: string, columnName: string): string {
-  // Clean up datasource name
-  const safeDatasourceName = datasourceName
-    .replace(/[\s\/\{\}\(\)]+/g, "-") // Replace spaces and brackets with dashes
-    .replace(/[^a-zA-Z0-9\-_]/g, "") // Remove any other special characters (including colons)
-    .replace(/-+/g, "-") // Replace multiple dashes with single dash
-    .replace(/^-|-$/g, ""); // Remove leading/trailing dashes
+function findRelationByName(
+  relations: any[],
+  relationName: string
+): any | undefined {
+  for (const relation of relations) {
+    // Check if this is the relation we're looking for
+    if (relation.name === relationName) {
+      return relation;
+    }
 
-  // Clean up column name - remove brackets and make URL-safe
-  const safeColumnName = columnName
-    .replace(/[\[\]]/g, "") // Remove square brackets
-    .replace(/[\s\/\{\}\(\)]+/g, "-") // Replace spaces and other brackets with dashes
-    .replace(/[^a-zA-Z0-9\-_]/g, "") // Remove any other special characters (including colons)
-    .replace(/-+/g, "-") // Replace multiple dashes with single dash
-    .replace(/^-|-$/g, ""); // Remove leading/trailing dashes
+    // If this relation has nested relations, search through them
+    if (relation.relation) {
+      const nestedRelations = ensureArray(relation.relation);
+      const found = findRelationByName(nestedRelations, relationName);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return undefined;
+}
 
-  return `${safeDatasourceName}--${safeColumnName}`;
+/**
+ * Helper function to find a node in the nodesById map
+ */
+function findNode(
+  nodesById: Map<string, Node>,
+  predicate: (node: Node) => boolean
+): Node | undefined {
+  for (const node of nodesById.values()) {
+    if (predicate(node)) {
+      return node;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Finds a node by its reference (either simple [Field] or datasource-qualified [Datasource].[Field])
+ */
+export function findNodeByReference(
+  nodesById: Map<string, Node>,
+  ref: Reference
+): Node | undefined {
+  if (ref.targetDatasourceName) {
+    // Datasource-qualified reference
+    return findNode(
+      nodesById,
+      (node) =>
+        node.datasourceName === `${ref.targetDatasourceName}` &&
+        (node.name === `[${ref.targetName}]` ||
+          node.displayName === `${ref.targetName}`)
+    );
+  } else {
+    // Simple reference
+    return findNode(
+      nodesById,
+      (node) =>
+        node.name === `[${ref.targetName}]` ||
+        node.caption === `${ref.targetName}`
+    );
+  }
 }
 
 /**
@@ -108,156 +211,212 @@ function generateNodeId(datasourceName: string, columnName: string): string {
 export function transformTWBData(twbFile: TWBFile): FileData {
   const nodesById = new Map<string, Node>();
   const references: Reference[] = [];
-  const referencedFields = new Set<string>();
 
   // Get datasources from the workbook
   const datasources = ensureArray(twbFile.workbook.datasources.datasource);
 
   // First pass: Create all nodes
   datasources.forEach((ds) => {
-    const columns = ensureArray(ds.column);
+    // Skip datasources with pivot relations
+    const relations = ensureArray(ds.connection?.relation);
+    if (relations.some((r) => r.type === "pivot")) {
+      return;
+    }
 
-    columns.forEach((col) => {
-      const id = generateNodeId(ds["@_name"], col["@_name"]);
-      const name = col["@_name"] || "";
-      const caption = col["@_caption"];
-      const displayName = caption || name.replace(/[\[\]]/g, "");
-      const role = col["@_role"]?.toLowerCase() as ColumnRole;
+    // Get column mappings if they exist
+    const columnMappings = ds.connection?.cols?.map
+      ? ensureArray(ds.connection.cols.map)
+      : [];
 
-      if (!role) {
-        throw new Error("Role is required for all columns");
-      }
+    if (columnMappings.length > 0) {
+      // Process columns from relations based on mappings
+      columnMappings.forEach((mapping) => {
+        const ref = parseReference(mapping.value);
+        const relationName = ref.datasource ?? "";
+        const fieldName = ref.field;
 
-      if (isParameterColumn(col)) {
-        // Create parameter node
-        const paramNode: ParameterNode = {
+        console.log(`Processing mapping: ${mapping.key} -> ${mapping.value}`);
+        console.log(
+          `Looking for relation: ${relationName} and field: ${fieldName}`
+        );
+
+        const relation = findRelationByName(relations, relationName);
+        if (!relation) {
+          console.log(`Relation not found: ${relationName}`);
+          return;
+        }
+        if (!relation.columns) {
+          console.log(`No columns in relation: ${relationName}`);
+          return;
+        }
+
+        const columns = ensureArray(relation.columns.column);
+        const column = columns.find((col) => col.name === fieldName);
+        if (!column) {
+          console.log(
+            `Column not found: ${fieldName} in relation ${relationName}`
+          );
+          return;
+        }
+
+        const id = generateNodeId(ds.name, mapping.key);
+        const name = mapping.key;
+        const dataType = convertDataType(column.datatype);
+        const role = convertRole(getDefaultRoleForDatatype(column.datatype));
+
+        // Create data source field node
+        const fieldNode: DatasourceNode = {
           id,
           name,
-          displayName,
-          type: "parameter",
-          caption,
-          dataType: col["@_datatype"],
+          type: "datasource",
+          dataType,
           role,
-          paramDomainType: col["@_param-domain-type"],
-          defaultFormat: col["@_default-format"],
-          members: col.members?.member
-            ? ensureArray(col.members.member).map((m) => ({
-                value: m["@_value"],
-                alias: m["@_alias"],
-              }))
-            : undefined,
-          range: col.range && {
-            min: col.range["@_min"],
-            max: col.range["@_max"],
-          },
-          aliases: col.aliases?.alias
-            ? ensureArray(col.aliases.alias).reduce(
-                (acc, a) => ({ ...acc, [a["@_key"]]: a["@_value"] }),
-                {}
-              )
-            : undefined,
-          calculation: col.calculation && {
-            class: col.calculation["@_class"],
-            formula: col.calculation["@_formula"],
-          },
+          displayName: mapping.key.replace(/[\[\]]/g, ""),
+          datasourceName: ds.name,
         };
-        nodesById.set(id, paramNode);
-      } else if (isCalculationColumn(col)) {
+        nodesById.set(id, fieldNode);
+        console.log(`Created node for ${mapping.key}`);
+      });
+    } else {
+      // Process columns directly from relations
+      relations.forEach((relation) => {
+        if (!relation.columns) return;
+
+        const columns = ensureArray(relation.columns.column);
+        columns.forEach((col) => {
+          const id = generateNodeId(ds.name, col.name);
+          const name = `[${col.name}]`;
+          const dataType = convertDataType(col.datatype);
+          const role = convertRole(getDefaultRoleForDatatype(col.datatype));
+
+          // Create data source field node
+          const fieldNode: DatasourceNode = {
+            id,
+            name,
+            type: "datasource",
+            dataType,
+            role,
+            displayName: col.name,
+            datasourceName: ds.name,
+          };
+          nodesById.set(id, fieldNode);
+        });
+      });
+    }
+
+    // Process metadata records
+    const metadataRecords = ds.connection?.["metadata-records"]?.[
+      "metadata-record"
+    ]
+      ? ensureArray(ds.connection["metadata-records"]["metadata-record"])
+      : [];
+
+    metadataRecords.forEach((record) => {
+      if (record["class"] !== "column") return;
+
+      const id = generateNodeId(ds.name, record["local-name"]);
+      const name = record["local-name"];
+      const dataType = convertDataType(record["local-type"]);
+      const role = convertRole(getDefaultRoleForDatatype(record["local-type"]));
+
+      // Create or update data source field node
+      const existingNode = nodesById.get(id);
+      if (existingNode) {
+        // Update existing node with metadata
+        existingNode.dataType = dataType;
+        existingNode.role = role;
+      } else {
+        // Create new node from metadata
+        const fieldNode: DatasourceNode = {
+          id,
+          name,
+          type: "datasource",
+          dataType,
+          role,
+          displayName: name.replace(/[\[\]]/g, ""),
+          datasourceName: ds.name,
+        };
+        nodesById.set(id, fieldNode);
+      }
+    });
+
+    // Process direct columns for calculations, parameters, and overwrites
+    const directColumns = ds.column ? ensureArray(ds.column) : [];
+    directColumns.forEach((col) => {
+      const id = generateNodeId(ds.name, col.name);
+      const name = col.name;
+      const caption = col.caption;
+      const displayName = caption || name.replace(/[\[\]]/g, "");
+      const dataType = convertDataType(col.datatype);
+      const role = convertRole(col.role);
+
+      if ("calculation" in col) {
         // Create calculation node
         const calcNode: CalculationNode = {
           id,
           name,
-          displayName,
           type: "calculation",
           caption,
-          dataType: col["@_datatype"],
+          dataType,
           role,
-          defaultFormat: col["@_default-format"],
-          calculation: decodeHtmlEntities(col.calculation["@_formula"]),
+          displayName,
+          calculation: col.calculation.formula,
+          datasourceName: ds.name,
         };
         nodesById.set(id, calcNode);
 
         // Extract references from calculation
         const fieldRefs = extractReferences(calcNode.calculation);
-        fieldRefs.forEach(({ ref, matchedText }) => {
-          referencedFields.add(ref);
-          // Check if the reference contains a datasource name
-          const [dsName, fieldName] = ref.split(".");
-          const targetId = fieldName
-            ? generateNodeId(dsName, fieldName) // Datasource-qualified reference
-            : generateNodeId(ds["@_name"], ref); // Simple reference in same datasource
+        fieldRefs.forEach(({ datasource, field, matchedText }) => {
           const reference: Reference = {
             sourceId: id,
-            targetId,
             type: "direct",
             matchedText,
+            targetDatasourceName: datasource,
+            targetName: field,
           };
           references.push(reference);
         });
-      } else if (isDataSourceColumn(col)) {
-        // Create column node
-        const colNode: ColumnNode = {
+      } else if (ds.name === "Parameters") {
+        // Create parameter node
+        const paramNode: ParameterNode = {
           id,
           name,
-          displayName,
-          type: "column",
+          type: "parameter",
           caption,
-          dataType: col["@_datatype"],
+          dataType,
           role,
-          aggregation: col["@_aggregation"],
-          precision: col["@_precision"]
-            ? parseInt(col["@_precision"], 10)
-            : undefined,
-          containsNull: col["@_contains-null"] === "true",
-          ordinal: col["@_ordinal"]
-            ? parseInt(col["@_ordinal"], 10)
-            : undefined,
-          remoteAlias: col["@_remote-alias"],
-          remoteName: col["@_remote-name"],
-          remoteType: col["@_remote-type"],
+          displayName,
+          datasourceName: ds.name,
         };
-        nodesById.set(id, colNode);
+        nodesById.set(id, paramNode);
+      } else {
+        // Check if this is an overwrite for a relation column
+        const existingNode = nodesById.get(id);
+        if (existingNode && existingNode.type === "datasource") {
+          // Update the existing node with overwrite information
+          existingNode.caption = caption;
+          existingNode.displayName = displayName;
+          existingNode.role = role;
+          existingNode.dataType = dataType;
+        } else {
+          nodesById.set(id, {
+            id,
+            name,
+            caption,
+            type: "datasource",
+            dataType,
+            role,
+            displayName,
+            datasourceName: ds.name,
+          });
+        }
       }
-      // Skip internal columns
     });
-  });
-
-  // Second pass: Update reference target IDs
-  const updatedReferences: Reference[] = references.map((ref) => {
-    // Try to find the actual node ID for the referenced field
-    const targetNode = Array.from(nodesById.values()).find((node) => {
-      // Match against node's internal name (which already has brackets)
-      if (node.name === ref.matchedText) {
-        return true;
-      }
-
-      // Match against node's caption with brackets added
-      if (node.caption && `[${node.caption}]` === ref.matchedText) {
-        return true;
-      }
-
-      // Handle datasource-qualified references
-      const [dsName, fieldName] = ref.matchedText.split(".");
-      if (dsName && fieldName) {
-        return (
-          node.name === fieldName &&
-          node.id.startsWith(dsName.replace(/[\[\]]/g, ""))
-        );
-      }
-
-      return false;
-    });
-
-    return {
-      sourceId: ref.sourceId,
-      targetId: targetNode?.id || ref.targetId,
-      type: targetNode ? "direct" : "indirect",
-      matchedText: ref.matchedText,
-    };
   });
 
   return {
     nodesById,
-    references: updatedReferences,
+    references,
   };
 }

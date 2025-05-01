@@ -1,59 +1,74 @@
 import fs from "fs";
 import path from "path";
 import { parseTWBSync } from "../../src/utils/twbParser";
-import { transformTWBData } from "../../src/utils/twbTransformer";
-import { ColumnNode, CalculationNode } from "../../src/types/app.types";
 import {
-  TWBDatasource,
-  TWBRegularColumn,
-  TWBParameterColumn,
-  TWBFile,
-  TWBColumn,
-} from "../../src/types/twb.types";
+  findNodeByReference,
+  transformTWBData,
+  extractReferences,
+} from "../../src/utils/twbTransformer";
 import {
-  ColumnDataType,
-  ColumnRole,
-  ColumnAggregationType,
-} from "../../src/types/enums";
-import { readFileSync } from "fs";
-import { join } from "path";
+  CalculationNode,
+  DatasourceNode,
+  ParameterNode,
+  Node,
+  Reference,
+} from "../../src/types/app.types";
+import { ColumnDataType, ColumnRole } from "../../src/types/enums";
 
 /**
- * Creates a mock TWB file with consistent structure
- * @param datasources Array of datasources to include in the file
- * @returns Mock TWB file
+ * Get all .twb files from example-files directory
  */
-function createMockTWBFile(datasources: TWBDatasource[]): TWBFile {
-  return {
-    workbook: {
-      "@_original-version": "18.1",
-      "@_version": "18.1",
-      "@_source-build": "2022.1.0 (20221.22.0313.1202)",
-      "@_source-platform": "mac",
-      "@_xmlns:user": "http://www.tableausoftware.com/xml/user",
-      "document-format-change-manifest": {},
-      preferences: {
-        preference: [],
-      },
-      datasources: {
-        datasource: datasources,
-      },
-    },
-  };
+function getExampleFiles(): string[] {
+  const exampleFilesDir = path.join(__dirname, "../../example-files");
+  return fs
+    .readdirSync(exampleFilesDir)
+    .filter((file) => file.endsWith(".twb"));
 }
 
-const TEST_FILES = [
-  "test_book.twb",
-  "test.twb",
-  "Validation _ S2 2023 Combined Results (2).twb",
-];
+/**
+ * Log missing references to a file
+ */
+function logMissingReferences(
+  filename: string,
+  calcNode: CalculationNode,
+  missingRefs: Reference[],
+  availableNodes: string[]
+) {
+  const logDir = path.join(__dirname, "../../logs");
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+
+  const logFile = path.join(logDir, "missing-references.log");
+  const timestamp = new Date().toISOString();
+  const logEntry = `
+=== ${timestamp} ===
+File: ${filename}
+Calculation: ${calcNode.name}
+Datasource: ${calcNode.datasourceName}
+Missing References:
+${missingRefs
+  .map(
+    (ref) =>
+      `  - ${ref.matchedText} (Datasource: ${
+        ref.targetDatasourceName || "none"
+      }, Target: ${ref.targetName})`
+  )
+  .join("\n")}
+Available Nodes: ${availableNodes.join(", ")}
+Formula: ${calcNode.calculation}
+----------------------------------------
+`;
+
+  fs.appendFileSync(logFile, logEntry);
+}
 
 describe("TWB Transformer", () => {
   // Test each example file
-  TEST_FILES.forEach((filename) => {
+  getExampleFiles().forEach((filename) => {
     describe(`File: ${filename}`, () => {
-      const fileContent = readFileSync(
-        join(__dirname, "..", "..", "example-files", filename),
+      const fileContent = fs.readFileSync(
+        path.join(__dirname, "../../example-files", filename),
         "utf-8"
       );
       const parsedFile = parseTWBSync(fileContent);
@@ -67,259 +82,242 @@ describe("TWB Transformer", () => {
       });
 
       test("each node has required base fields", () => {
-        Array.from(result.nodesById.values()).forEach((node) => {
+        Array.from(result.nodesById.values()).forEach((node: Node) => {
           expect(node.id).toBeDefined();
           expect(typeof node.id).toBe("string");
           expect(node.name).toBeDefined();
           expect(typeof node.name).toBe("string");
-          expect(node.type).toMatch(/^(column|calculation|parameter)$/);
+          expect(node.type).toMatch(/^(datasource|calculation|parameter)$/);
           expect(node.displayName).toBeDefined();
           expect(typeof node.displayName).toBe("string");
-
-          // Optional but typed fields
-          if (node.dataType) {
-            expect(Object.values(ColumnDataType)).toContain(node.dataType);
-          }
-          if (node.role) {
-            expect(Object.values(ColumnRole)).toContain(node.role);
-          }
+          expect(node.dataType).toBeDefined();
+          expect(Object.values(ColumnDataType)).toContain(node.dataType);
+          expect(node.role).toBeDefined();
+          expect(Object.values(ColumnRole)).toContain(node.role);
         });
       });
 
-      test("displayName is correctly computed", () => {
-        Array.from(result.nodesById.values()).forEach((node) => {
-          if (node.caption) {
-            expect(node.displayName).toBe(node.caption);
-          } else if (node.name.startsWith("[") && node.name.endsWith("]")) {
-            expect(node.displayName).toBe(node.name.slice(1, -1));
-          } else {
-            expect(node.displayName).toBe(node.name);
-          }
-        });
-      });
-
-      test("column nodes have correct structure", () => {
-        const columnNodes = Array.from(result.nodesById.values()).filter(
-          (node): node is ColumnNode => node.type === "column"
-        );
-
-        columnNodes.forEach((node) => {
-          expect(node.type).toBe("column");
-
-          // Optional but typed fields
-          if (node.aggregation) {
-            expect(["Sum", "Count", "Year", "None"]).toContain(
-              node.aggregation
-            );
-          }
-          if (node.precision !== undefined) {
-            expect(typeof node.precision).toBe("number");
-          }
-          if (node.containsNull !== undefined) {
-            expect(typeof node.containsNull).toBe("boolean");
-          }
-          if (node.ordinal !== undefined) {
-            expect(typeof node.ordinal).toBe("number");
-          }
-        });
-      });
-
-      test("calculation nodes have correct structure", () => {
+      test("calculation nodes have all referenced nodes", () => {
         const calculationNodes = Array.from(result.nodesById.values()).filter(
           (node): node is CalculationNode => node.type === "calculation"
         );
 
-        calculationNodes.forEach((node) => {
-          expect(node.type).toBe("calculation");
+        calculationNodes.forEach((calcNode) => {
+          // Get all references for this calculation node
+          const nodeRefs = result.references.filter(
+            (ref) => ref.sourceId === calcNode.id
+          );
 
-          // Optional but typed fields
-          if (node.calculation) {
-            expect(typeof node.calculation).toBe("string");
+          // Check that each referenced field exists in nodesById
+          const missingRefs: Reference[] = [];
+          nodeRefs.forEach((ref) => {
+            const targetNode = findNodeByReference(result.nodesById, ref);
+            if (!targetNode) {
+              missingRefs.push(ref);
+            }
+          });
+
+          // If there are missing fields, log them and throw error
+          if (missingRefs.length > 0) {
+            const availableNodes = Array.from(result.nodesById.values())
+              .map((node) => node.name)
+              .sort();
+
+            logMissingReferences(
+              filename,
+              calcNode,
+              missingRefs,
+              availableNodes
+            );
+
+            const errorMessage = `Calculation "${
+              calcNode.name
+            }" in file "${filename}" references fields that don't exist: ${missingRefs
+              .map((ref) => ref.matchedText)
+              .join(", ")}\nAvailable nodes: ${availableNodes.join(", ")}`;
+            throw new Error(errorMessage);
           }
         });
       });
+    });
+  });
 
-      test("references are correctly structured", () => {
-        result.references.forEach((ref) => {
-          expect(ref.sourceId).toBeDefined();
-          expect(typeof ref.sourceId).toBe("string");
-          expect(ref.targetId).toBeDefined();
-          expect(typeof ref.targetId).toBe("string");
-          expect(["direct", "indirect"]).toContain(ref.type);
-        });
+  // Mock-based tests
+  describe("Mock-based tests", () => {
+    test("handles parameter columns correctly", () => {
+      const mockTWB = {
+        workbook: {
+          datasources: {
+            datasource: {
+              name: "Parameters",
+              column: {
+                name: "[TestParam]",
+                datatype: "string",
+                role: "dimension",
+                caption: "Test Parameter",
+              },
+            },
+          },
+        },
+      };
+
+      const result = transformTWBData(mockTWB);
+      const nodes = Array.from(result.nodesById.values());
+      const paramNode = nodes.find(
+        (n): n is ParameterNode => n.type === "parameter"
+      );
+
+      expect(paramNode).toBeDefined();
+      expect(paramNode?.name).toBe("[TestParam]");
+      expect(paramNode?.type).toBe("parameter");
+      expect(paramNode?.dataType).toBe(ColumnDataType.String);
+      expect(paramNode?.role).toBe(ColumnRole.Dimension);
+    });
+
+    test("handles calculation columns correctly", () => {
+      const mockTWB = {
+        workbook: {
+          datasources: {
+            datasource: {
+              name: "TestDS",
+              column: {
+                name: "[TestCalc]",
+                datatype: "string",
+                role: "dimension",
+                calculation: {
+                  formula: "[Field1] + [Field2]",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const result = transformTWBData(mockTWB);
+      const nodes = Array.from(result.nodesById.values());
+      const calcNode = nodes.find(
+        (n): n is CalculationNode => n.type === "calculation"
+      );
+
+      expect(calcNode).toBeDefined();
+      expect(calcNode?.name).toBe("[TestCalc]");
+      expect(calcNode?.type).toBe("calculation");
+      expect(calcNode?.calculation).toBe("[Field1] + [Field2]");
+    });
+
+    test("handles relation columns correctly", () => {
+      const mockTWB = {
+        workbook: {
+          datasources: {
+            datasource: {
+              name: "TestDS",
+              connection: {
+                relation: {
+                  type: "table" as const,
+                  columns: {
+                    column: {
+                      name: "TestField",
+                      datatype: "integer",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const result = transformTWBData(mockTWB);
+      const nodes = Array.from(result.nodesById.values());
+      const fieldNode = nodes.find(
+        (n): n is DatasourceNode => n.type === "datasource"
+      );
+
+      expect(fieldNode).toBeDefined();
+      expect(fieldNode?.name).toBe("[TestField]");
+      expect(fieldNode?.type).toBe("datasource");
+      expect(fieldNode?.dataType).toBe(ColumnDataType.Integer);
+      expect(fieldNode?.role).toBe(ColumnRole.Measure);
+    });
+
+    test("handles column overwrites correctly", () => {
+      const mockTWB = {
+        workbook: {
+          datasources: {
+            datasource: {
+              name: "TestDS",
+              connection: {
+                relation: {
+                  type: "table" as const,
+                  columns: {
+                    column: {
+                      name: "TestField",
+                      datatype: "integer",
+                    },
+                  },
+                },
+              },
+              column: {
+                name: "[TestField]",
+                datatype: "string",
+                role: "dimension",
+                caption: "Overwritten Field",
+              },
+            },
+          },
+        },
+      };
+
+      const result = transformTWBData(mockTWB);
+      const nodes = Array.from(result.nodesById.values());
+      const fieldNode = nodes.find(
+        (n): n is DatasourceNode => n.type === "datasource"
+      );
+
+      expect(fieldNode).toBeDefined();
+      expect(fieldNode?.name).toBe("[TestField]");
+      expect(fieldNode?.type).toBe("datasource");
+      expect(fieldNode?.dataType).toBe(ColumnDataType.String);
+      expect(fieldNode?.role).toBe(ColumnRole.Dimension);
+      expect(fieldNode?.caption).toBe("Overwritten Field");
+    });
+  });
+
+  describe("extractReferences", () => {
+    it("should handle complex calculations with quoted strings or comments with field references", () => {
+      const complexCalculation = `case [Parameters].[Navigation_1p (copy)_1135751564852047874]
+when "Production" then 
+    IF [Parameters].[Parameter 8]=1 THEN 
+        "Up till Apr 2023: 2 x Prod DAC + RTP + 0.33 x PUB + Compensation"+"
+"+"From Apr 2023: 4 x Prod DAC + RTP + 0.67 x PUB + Compensation"
+    ELSE 'AC + DAC + RTP + 0.67 x PUB + Comp + [Parameters].[Parameter 3]'
+    // This is comment with field reference [Parameters].[Parameter 4]
+    /* Multiline comment with field reference [Parameters].[Parameter 5] 
+    And another field reference [Parameters].[Parameter 6]
+    */
+    END
+when "Compensation" then "Up till Apr 2023: Manual Debriefs + Scorer Debriefs + Supplier Debriefs + Inq RTP + Inq PUB + Quest RTP + Quest PUB + 0.5 x LR Help + CoE + Orientation + Prefilling + Select"+"
+"+"From Apr 2023: 2 x Manual Debriefs + 2 x Scorer Debriefs + 2 x Supplier Debriefs + 2 x Inq RTP + 2 x Inq PUB + Quest RTP + Quest PUB + LR Help + [CoE x 2 (Apr 23)] + 2 x Orientation + 2 x Prefilling + Select"
+end`;
+
+      const references = extractReferences(complexCalculation);
+
+      // Should only find two references, ignoring everything in quotes
+      expect(references).toHaveLength(2);
+
+      // Check first reference
+      expect(references[0]).toEqual({
+        datasource: "Parameters",
+        field: "Navigation_1p (copy)_1135751564852047874",
+        matchedText: "[Parameters].[Navigation_1p (copy)_1135751564852047874]",
       });
-    });
-  });
 
-  describe("Role handling", () => {
-    test("all nodes have a role", () => {
-      const testData = createMockTWBFile([
-        {
-          "@_name": "test",
-          column: [
-            {
-              "@_name": "col1",
-              "@_datatype": ColumnDataType.String,
-              "@_role": ColumnRole.Dimension,
-              "@_aggregation": ColumnAggregationType.None,
-              "@_remote-name": "col1",
-              "@_remote-type": "string",
-              "@_ordinal": "1",
-              "@_remote-alias": "col1",
-            } as TWBRegularColumn,
-            {
-              "@_name": "col2",
-              "@_datatype": ColumnDataType.Integer,
-              "@_role": ColumnRole.Measure,
-              "@_aggregation": ColumnAggregationType.Sum,
-              "@_remote-name": "col2",
-              "@_remote-type": "integer",
-              "@_ordinal": "2",
-              "@_remote-alias": "col2",
-            } as TWBRegularColumn,
-            {
-              "@_name": "param1",
-              "@_datatype": ColumnDataType.Integer,
-              "@_role": ColumnRole.Measure,
-              "@_param-domain-type": "list",
-            } as TWBParameterColumn,
-          ],
-        },
-      ]);
-
-      const result = transformTWBData(testData);
-      const nodes = Array.from(result.nodesById.values());
-      const col1 = nodes.find((n) => n.name === "col1");
-      const col2 = nodes.find((n) => n.name === "col2");
-      const param1 = nodes.find((n) => n.name === "param1");
-
-      expect(col1?.role).toBe(ColumnRole.Dimension);
-      expect(col2?.role).toBe(ColumnRole.Measure);
-      expect(param1?.role).toBe(ColumnRole.Measure);
-    });
-
-    test("throws error when role is missing", () => {
-      const testData = createMockTWBFile([
-        {
-          "@_name": "test",
-          column: [
-            {
-              "@_name": "col1",
-              "@_datatype": ColumnDataType.String,
-              "@_aggregation": ColumnAggregationType.None,
-              "@_remote-name": "col1",
-              "@_remote-type": "string",
-              "@_ordinal": "1",
-              "@_remote-alias": "col1",
-            } as TWBRegularColumn,
-          ],
-        },
-      ]);
-
-      expect(() => transformTWBData(testData)).toThrow("Role is required");
-    });
-  });
-
-  describe("HTML Entity Decoding", () => {
-    it("should properly decode HTML entities in calculations", () => {
-      const testData = createMockTWBFile([
-        {
-          "@_name": "test_ds",
-          column: [
-            {
-              "@_name": "[Test Calculation]",
-              "@_role": ColumnRole.Measure,
-              "@_datatype": ColumnDataType.String,
-              calculation: {
-                "@_class": "tableau",
-                "@_formula":
-                  'case [Role]&#13;&#10;when "D" then "AchievementAA"&#13;&#10;when "S" then "QCF AAA"&#13;&#10;when "T" then "QCF BAA"&#13;&#10;when "V" then "QCF Feedback receivedAA"&#13;&#10;when "Z" then "QCF Feedback providedAA"&#13;&#10;end',
-              },
-            },
-          ],
-        },
-      ]);
-
-      const result = transformTWBData(testData);
-      const nodes = Array.from(result.nodesById.values());
-      const calcNode = nodes.find((n) => n.name === "[Test Calculation]");
-
-      expect(calcNode).toBeDefined();
-      expect(calcNode?.type).toBe("calculation");
-      if (calcNode?.type === "calculation") {
-        const expectedFormula =
-          "case [Role]\r\n" +
-          'when "D" then "AchievementAA"\r\n' +
-          'when "S" then "QCF AAA"\r\n' +
-          'when "T" then "QCF BAA"\r\n' +
-          'when "V" then "QCF Feedback receivedAA"\r\n' +
-          'when "Z" then "QCF Feedback providedAA"\r\n' +
-          "end";
-
-        expect(calcNode.calculation).toBe(expectedFormula);
-      }
-    });
-
-    it("should handle other HTML entities in calculations", () => {
-      const testData = createMockTWBFile([
-        {
-          "@_name": "test_ds",
-          column: [
-            {
-              "@_name": "[HTML Test]",
-              "@_role": ColumnRole.Measure,
-              "@_datatype": ColumnDataType.String,
-              calculation: {
-                "@_class": "tableau",
-                "@_formula":
-                  "IF [Value] &lt; 10 &amp;&amp; [Name] = &quot;Test&quot; THEN &apos;Yes&apos; END",
-              },
-            },
-          ],
-        },
-      ]);
-
-      const result = transformTWBData(testData);
-      const nodes = Array.from(result.nodesById.values());
-      const calcNode = nodes.find((n) => n.name === "[HTML Test]");
-
-      expect(calcNode).toBeDefined();
-      expect(calcNode?.type).toBe("calculation");
-      if (calcNode?.type === "calculation") {
-        expect(calcNode.calculation).toBe(
-          "IF [Value] < 10 && [Name] = \"Test\" THEN 'Yes' END"
-        );
-      }
-    });
-  });
-
-  describe("Node ID Generation", () => {
-    test("should generate URL-safe node IDs", () => {
-      const testData = createMockTWBFile([
-        {
-          "@_name": "Test/Data:Source",
-          column: [
-            {
-              "@_name": "[Special:Field/Name]",
-              "@_datatype": ColumnDataType.String,
-              "@_role": ColumnRole.Dimension,
-              "@_aggregation": ColumnAggregationType.None,
-              "@_remote-name": "field",
-              "@_remote-type": "string",
-              "@_ordinal": "1",
-              "@_remote-alias": "field",
-            } as TWBRegularColumn,
-          ],
-        },
-      ]);
-
-      const result = transformTWBData(testData);
-      const nodeId = Array.from(result.nodesById.values())[0].id;
-
-      // Check that the ID only contains URL-safe characters
-      expect(nodeId).toMatch(/^[A-Za-z0-9_-]+$/);
-      // Check that special characters were properly handled
-      expect(nodeId).toBe("Test-DataSource--SpecialField-Name");
+      // Check second reference
+      expect(references[1]).toEqual({
+        datasource: "Parameters",
+        field: "Parameter 8",
+        matchedText: "[Parameters].[Parameter 8]",
+      });
     });
   });
 });

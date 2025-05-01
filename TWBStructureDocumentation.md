@@ -94,6 +94,73 @@ Tableau workbooks contain several types of columns:
    - Used for internal object tracking
    - Should be ignored for field dependency analysis
 
+## Relation Structure
+
+Columns in a datasource are defined within a relation structure:
+
+```xml
+<datasource name="My Datasource">
+  <connection>
+    <relation>
+      <columns>
+        <column datatype="string" name="Region" ordinal="3" />
+        <!-- More columns -->
+      </columns>
+    </relation>
+  </connection>
+  <metadata-records>
+    <!-- Column metadata -->
+  </metadata-records>
+</datasource>
+```
+
+The structure is:
+
+1. Datasource contains:
+   - Connection information
+   - Relation structure
+   - Metadata records
+2. Relation contains:
+   - Column definitions
+   - Join information (if applicable)
+3. Columns contain:
+   - Basic information (name, datatype, ordinal)
+   - Additional metadata is in metadata-records
+
+## Metadata Records
+
+Each column can have associated metadata:
+
+```xml
+<metadata-record class="column">
+  <remote-name>Region</remote-name>
+  <remote-type>130</remote-type>
+  <local-name>[Region]</local-name>
+  <parent-name>[My Datasource]</parent-name>
+  <remote-alias>Region</remote-alias>
+  <ordinal>3</ordinal>
+  <local-type>string</local-type>
+  <aggregation>Count</aggregation>
+  <contains-null>true</contains-null>
+  <collation flag="1" name="LEN_RUS_S2" />
+  <attributes>
+    <attribute datatype="string" name="DebugRemoteType">"WSTR"</attribute>
+  </attributes>
+</metadata-record>
+```
+
+## Data Types
+
+Tableau supports various data types for columns:
+
+- `string`: Text data
+- `integer`: Whole numbers
+- `real`: Decimal numbers
+- `boolean`: True/false values
+- `date`: Date values
+- `datetime`: Date and time values
+- `spatial`: Geographic data
+
 ## Recognition Rules
 
 ### How to Identify Internal Columns

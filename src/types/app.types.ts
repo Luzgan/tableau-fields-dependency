@@ -1,68 +1,40 @@
-import { ColumnAggregationType, ColumnDataType, ColumnRole } from "./enums";
+import { ColumnDataType, ColumnRole } from "./enums";
 
-export type NodeType = "column" | "calculation" | "parameter" | "internal";
+export type NodeType = "datasource" | "calculation" | "parameter";
 
-interface BaseNode {
+export interface BaseNode {
   id: string;
   name: string;
   type: NodeType;
   caption?: string;
-  description?: string;
   dataType: ColumnDataType;
   role: ColumnRole;
   displayName: string;
+  datasourceName: string;
 }
 
-export interface ColumnNode extends BaseNode {
-  type: "column";
-  aggregation: ColumnAggregationType;
-  precision?: number;
-  containsNull?: boolean;
-  ordinal?: number;
-  remoteAlias?: string;
-  remoteName?: string;
-  remoteType?: string;
+export interface DatasourceNode extends BaseNode {
+  type: "datasource";
 }
 
 export interface ParameterNode extends BaseNode {
   type: "parameter";
-  paramDomainType: "list" | "range";
-  defaultFormat?: string;
-  members?: Array<{
-    value: string;
-    alias?: string;
-  }>;
-  range?: {
-    min: string | number;
-    max: string | number;
-  };
-  aliases?: Record<string, string>;
-  calculation?: {
-    class: "tableau";
-    formula: string;
-  };
 }
 
 export interface CalculationNode extends BaseNode {
   type: "calculation";
-  defaultFormat?: string;
   calculation: string;
 }
 
-export interface InternalNode extends BaseNode {
-  type: "internal";
-  name: `[__tableau_internal_object_id__].${string}`;
-  dataType: ColumnDataType.Table;
-}
+export type Node = DatasourceNode | CalculationNode | ParameterNode;
 
-export type Node = ColumnNode | CalculationNode | ParameterNode | InternalNode;
-
-export type Reference = {
+export interface Reference {
   sourceId: string;
-  targetId: string;
   type: "direct" | "indirect";
   matchedText: string;
-};
+  targetDatasourceName?: string;
+  targetName: string;
+}
 
 export interface FileData {
   nodesById: Map<string, Node>;
