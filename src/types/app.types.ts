@@ -28,7 +28,7 @@ export interface CalculationNode extends BaseNode {
 
 export type Node = DatasourceNode | CalculationNode | ParameterNode;
 
-export interface Reference {
+export interface UnresolvedReference {
   sourceId: string;
   type: "direct" | "indirect";
   matchedText: string;
@@ -36,7 +36,15 @@ export interface Reference {
   targetName: string;
 }
 
-export interface FileData {
+export interface Reference extends UnresolvedReference {
+  targetId: string;
+}
+
+export interface FileData extends TransformedTWBFileData {
+  filename: string;
+}
+
+export interface TransformedTWBFileData {
   nodesById: Map<string, Node>;
   references: Reference[];
 }

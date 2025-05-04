@@ -35,7 +35,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ fileInputRef }) => {
       const transformedData = transformTWBData(datasources);
       const nodes = Array.from(transformedData.nodesById.values());
 
-      setFileData(transformedData);
+      setFileData({
+        ...transformedData,
+        filename: file.name,
+      });
       showNotification(
         `Successfully loaded: ${file.name} (${nodes.length} nodes, ${transformedData.references.length} references)`,
         "success"

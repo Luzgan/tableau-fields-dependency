@@ -21,7 +21,7 @@ import { useAppContext } from "./AppContext";
 import { Node, NodeType } from "../types/app.types";
 
 const nodeTypeConfig = {
-  column: {
+  datasource: {
     icon: ColumnIcon,
     color: "#9c27b0", // purple for columns
     label: "Data source fields",
@@ -54,7 +54,7 @@ const FieldsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<NodeType[]>([
-    "column",
+    "datasource",
     "calculation",
     "parameter",
   ]);
@@ -288,7 +288,7 @@ const FieldsList: React.FC = () => {
                 <Chip
                   size="small"
                   label={
-                    node.type === "column"
+                    node.type === "datasource"
                       ? "Data source field"
                       : node.type === "calculation"
                       ? "Calculated field"

@@ -1,11 +1,12 @@
 import { TWBFile, getDefaultRoleForDatatype } from "../types/twb.types";
 import {
-  FileData,
+  TransformedTWBFileData,
   Node,
   DatasourceNode,
   CalculationNode,
   ParameterNode,
   Reference,
+  UnresolvedReference,
 } from "../types/app.types";
 import { ColumnDataType, ColumnRole } from "../types/enums";
 import { ensureArray } from "./twbParser";
@@ -183,7 +184,7 @@ function findNode(
  */
 export function findNodeByReference(
   nodesById: Map<string, Node>,
-  ref: Reference
+  ref: UnresolvedReference
 ): Node | undefined {
   if (ref.targetDatasourceName) {
     // Datasource-qualified reference
@@ -208,10 +209,9 @@ export function findNodeByReference(
 /**
  * Transforms TWB file into our internal types
  */
-export function transformTWBData(twbFile: TWBFile): FileData {
+export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
   const nodesById = new Map<string, Node>();
   const references: Reference[] = [];
-
   // Get datasources from the workbook
   const datasources = ensureArray(twbFile.workbook.datasources.datasource);
 
@@ -364,19 +364,6 @@ export function transformTWBData(twbFile: TWBFile): FileData {
           datasourceName: ds.name,
         };
         nodesById.set(id, calcNode);
-
-        // Extract references from calculation
-        const fieldRefs = extractReferences(calcNode.calculation);
-        fieldRefs.forEach(({ datasource, field, matchedText }) => {
-          const reference: Reference = {
-            sourceId: id,
-            type: "direct",
-            matchedText,
-            targetDatasourceName: datasource,
-            targetName: field,
-          };
-          references.push(reference);
-        });
       } else if (ds.name === "Parameters") {
         // Create parameter node
         const paramNode: ParameterNode = {
@@ -414,6 +401,29 @@ export function transformTWBData(twbFile: TWBFile): FileData {
       }
     });
   });
+
+  // Create and resolve references for all calculation nodes
+  for (const node of nodesById.values()) {
+    if (node.type === "calculation") {
+      const fieldRefs = extractReferences(node.calculation);
+      fieldRefs.forEach(({ datasource, field, matchedText }) => {
+        // Resolve targetId immediately
+        const unresolvedReference: UnresolvedReference = {
+          sourceId: node.id,
+          type: "direct",
+          matchedText,
+          targetDatasourceName: datasource,
+          targetName: field,
+        };
+        const targetNode = findNodeByReference(nodesById, unresolvedReference);
+
+        return {
+          ...unresolvedReference,
+          targetId: targetNode?.id ?? "",
+        };
+      });
+    }
+  }
 
   return {
     nodesById,
