@@ -417,10 +417,10 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
         };
         const targetNode = findNodeByReference(nodesById, unresolvedReference);
 
-        return {
+        references.push({
           ...unresolvedReference,
           targetId: targetNode?.id ?? "",
-        };
+        });
       });
     }
   }

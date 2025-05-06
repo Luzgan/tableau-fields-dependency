@@ -154,6 +154,7 @@ function Calculation({
 }) {
   const { helpers } = useAppContext();
   const references = helpers.getReferencesForNode(nodeId);
+  console.log(references);
   const sourceField = helpers.getNodeById(nodeId);
 
   // Create a map of matched text to node ID for quick lookup
