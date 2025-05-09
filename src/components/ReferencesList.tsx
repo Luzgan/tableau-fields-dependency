@@ -49,8 +49,10 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
     setValue(newValue);
   };
 
-  const referencingNodes = helpers.getReferencingNodes(node.id);
-  const referencedNodes = helpers.getReferencedNodes(node.id);
+  const directReferencingNodes = helpers.getReferencingNodes(node.id);
+  const directReferencedNodes = helpers.getReferencedNodes(node.id);
+  const indirectReferencingNodes = helpers.getIndirectReferencingNodes(node.id);
+  const indirectReferencedNodes = helpers.getIndirectReferencedNodes(node.id);
 
   const getReferenceCounts = (
     references: Reference[],
@@ -94,82 +96,123 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
     true
   );
 
-  const renderNodeList = (nodes: Node[], isReferencing: boolean) => {
-    if (nodes.length === 0) {
+  const renderNodeList = (
+    directNodes: Node[],
+    indirectNodes: Node[],
+    isReferencing: boolean
+  ) => {
+    if (directNodes.length === 0 && indirectNodes.length === 0) {
       return (
         <Typography color="text.secondary">No references found</Typography>
       );
     }
 
-    const counts = isReferencing ? referencingCounts : referencedCounts;
-
     return (
       <>
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary">
-            {`Direct references: ${counts.direct}`}
+            {`Direct references: ${directNodes.length}`}
           </Typography>
           <Typography variant="subtitle2" color="text.secondary">
-            {`Indirect references: ${counts.indirect}`}
+            {`Indirect references: ${indirectNodes.length}`}
           </Typography>
         </Box>
 
-        {nodes.map((refNode) => {
-          const refType = getReferenceType(
-            fileData?.references,
-            isReferencing ? refNode.id : node.id,
-            isReferencing ? node.id : refNode.id
-          );
-
-          return (
+        {directNodes.map((refNode) => (
+          <Box
+            key={refNode.id}
+            component={Link}
+            to={`/field/${refNode.id}`}
+            state={{ from: "reference" }}
+            sx={{
+              p: 2,
+              mb: 1,
+              backgroundColor: "grey.100",
+              borderRadius: 1,
+              cursor: "pointer",
+              textDecoration: "none",
+              color: "inherit",
+              display: "block",
+              "&:hover": {
+                backgroundColor: "grey.200",
+              },
+            }}
+            data-testid="reference-link"
+            data-node-id={refNode.id}
+          >
             <Box
-              key={refNode.id}
-              component={Link}
-              to={`/field/${refNode.id}`}
-              state={{ from: "reference" }}
               sx={{
-                p: 2,
-                mb: 1,
-                backgroundColor: "grey.100",
-                borderRadius: 1,
-                cursor: "pointer",
-                textDecoration: "none",
-                color: "inherit",
-                display: "block",
-                "&:hover": {
-                  backgroundColor: "grey.200",
-                },
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
-              data-testid="reference-link"
-              data-node-id={refNode.id}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Box>
-                  <Typography>{refNode.displayName}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {refNode.type}
-                  </Typography>
-                </Box>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color:
-                      refType === "direct" ? "success.main" : "warning.main",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {refType.toUpperCase()}
+              <Box>
+                <Typography>{refNode.displayName}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {refNode.type}
                 </Typography>
               </Box>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "success.main",
+                  fontWeight: "bold",
+                }}
+              >
+                DIRECT
+              </Typography>
             </Box>
-          );
-        })}
+          </Box>
+        ))}
+
+        {indirectNodes.map((refNode) => (
+          <Box
+            key={refNode.id}
+            component={Link}
+            to={`/field/${refNode.id}`}
+            state={{ from: "reference" }}
+            sx={{
+              p: 2,
+              mb: 1,
+              backgroundColor: "grey.50",
+              borderRadius: 1,
+              cursor: "pointer",
+              textDecoration: "none",
+              color: "inherit",
+              display: "block",
+              "&:hover": {
+                backgroundColor: "grey.100",
+              },
+            }}
+            data-testid="reference-link"
+            data-node-id={refNode.id}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Box>
+                <Typography>{refNode.displayName}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {refNode.type}
+                </Typography>
+              </Box>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "warning.main",
+                  fontWeight: "bold",
+                }}
+              >
+                INDIRECT
+              </Typography>
+            </Box>
+          </Box>
+        ))}
       </>
     );
   };
@@ -183,20 +226,24 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
           aria-label="references tabs"
         >
           <Tab
-            label={`Referenced By (${referencingNodes.length})`}
+            label={`Referenced By (${
+              directReferencingNodes.length + indirectReferencingNodes.length
+            })`}
             {...a11yProps(0)}
           />
           <Tab
-            label={`References (${referencedNodes.length})`}
+            label={`References (${
+              directReferencedNodes.length + indirectReferencedNodes.length
+            })`}
             {...a11yProps(1)}
           />
         </Tabs>
       </Box>
       <TabPanel value={value} index={0}>
-        {renderNodeList(referencingNodes, true)}
+        {renderNodeList(directReferencingNodes, indirectReferencingNodes, true)}
       </TabPanel>
       <TabPanel value={value} index={1}>
-        {renderNodeList(referencedNodes, false)}
+        {renderNodeList(directReferencedNodes, indirectReferencedNodes, false)}
       </TabPanel>
     </Box>
   );

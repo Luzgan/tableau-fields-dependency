@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState } from "react";
 import { FileData, Node, Reference } from "../types/app.types";
+import {
+  getReferencingNodes,
+  getReferencedNodes,
+  getIndirectReferencingNodes,
+  getIndirectReferencedNodes,
+} from "../utils/referenceHelpers";
 
 interface AppContextType {
   fileData: FileData | null;
@@ -10,6 +16,8 @@ interface AppContextType {
     getReferencesForNode: (nodeId: string) => Reference[];
     getReferencingNodes: (nodeId: string) => Node[];
     getReferencedNodes: (nodeId: string) => Node[];
+    getIndirectReferencingNodes: (nodeId: string) => Node[];
+    getIndirectReferencedNodes: (nodeId: string) => Node[];
   };
 }
 
@@ -22,6 +30,8 @@ export const AppContext = createContext<AppContextType>({
     getReferencesForNode: () => [],
     getReferencingNodes: () => [],
     getReferencedNodes: () => [],
+    getIndirectReferencingNodes: () => [],
+    getIndirectReferencedNodes: () => [],
   },
 });
 
@@ -52,31 +62,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     },
 
     getReferencingNodes: (nodeId: string) => {
-      if (!fileData?.references || !fileData.nodesById) return [];
-      const referencingNodeIds = fileData.references
-        .filter((ref) => ref.targetId === nodeId)
-        .map((ref) => ref.sourceId);
-      const nodes = referencingNodeIds
-        .map((id) => fileData.nodesById.get(id))
-        .filter((node): node is Node => {
-          if (!node) return false;
-          return "id" in node && "name" in node && "type" in node;
-        });
-      return nodes;
+      if (!fileData) return [];
+      return getReferencingNodes(fileData, nodeId);
     },
 
     getReferencedNodes: (nodeId: string) => {
-      if (!fileData?.references || !fileData.nodesById) return [];
-      const referencedNodeIds = fileData.references
-        .filter((ref) => ref.sourceId === nodeId)
-        .map((ref) => ref.targetId);
-      const nodes = referencedNodeIds
-        .map((id) => fileData.nodesById.get(id))
-        .filter((node): node is Node => {
-          if (!node) return false;
-          return "id" in node && "name" in node && "type" in node;
-        });
-      return nodes;
+      if (!fileData) return [];
+      return getReferencedNodes(fileData, nodeId);
+    },
+
+    getIndirectReferencingNodes: (nodeId: string) => {
+      if (!fileData) return [];
+      return getIndirectReferencingNodes(fileData, nodeId);
+    },
+
+    getIndirectReferencedNodes: (nodeId: string) => {
+      if (!fileData) return [];
+      return getIndirectReferencedNodes(fileData, nodeId);
     },
   };
 
