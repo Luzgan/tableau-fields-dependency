@@ -187,4 +187,67 @@ describe("referenceHelpers", () => {
         .sort()
     ).toEqual(["C", "D", "E", "F"].sort());
   });
+
+  it("does not return duplicate nodes in direct or indirect results", () => {
+    // A -> B, A -> B (duplicate direct)
+    // A -> C -> D, A -> C -> D (duplicate indirect)
+    const nodes = new Map<string, Node>([
+      ["A", createTestNode("A", "Node A")],
+      ["B", createTestNode("B", "Node B")],
+      ["C", createTestNode("C", "Node C")],
+      ["D", createTestNode("D", "Node D")],
+    ]);
+    const references: Reference[] = [
+      createTestReference("A", "B"),
+      createTestReference("A", "B"), // duplicate direct
+      createTestReference("A", "C"),
+      createTestReference("C", "D"),
+      createTestReference("A", "C"), // duplicate path to C
+      createTestReference("C", "D"), // duplicate indirect
+    ];
+    const fileData: FileData = {
+      filename: "test.twb",
+      nodesById: nodes,
+      references,
+    };
+    // Direct referenced nodes should only have B and C once
+    const direct = getReferencedNodes(fileData, "A");
+    expect(direct.map((n) => n.id).sort()).toEqual(["B", "C"].sort());
+    expect(new Set(direct.map((n) => n.id)).size).toBe(direct.length);
+    // Indirect referenced nodes should only have D once
+    const indirect = getIndirectReferencedNodes(fileData, "A");
+    expect(indirect.map((n) => n.id)).toEqual(["D"]);
+    expect(new Set(indirect.map((n) => n.id)).size).toBe(indirect.length);
+  });
+
+  it("allows a node to appear in both direct and indirect if appropriate, but not more than once in each", () => {
+    // A -> B, A -> C, B -> D, C -> D, D -> B (cycle)
+    // D is both direct and indirect referenced from A
+    const nodes = new Map<string, Node>([
+      ["A", createTestNode("A", "Node A")],
+      ["B", createTestNode("B", "Node B")],
+      ["C", createTestNode("C", "Node C")],
+      ["D", createTestNode("D", "Node D")],
+    ]);
+    const references: Reference[] = [
+      createTestReference("A", "B"),
+      createTestReference("A", "C"),
+      createTestReference("B", "D"),
+      createTestReference("C", "D"),
+      createTestReference("D", "B"),
+    ];
+    const fileData: FileData = {
+      filename: "test.twb",
+      nodesById: nodes,
+      references,
+    };
+    const direct = getReferencedNodes(fileData, "A");
+    const indirect = getIndirectReferencedNodes(fileData, "A");
+    // D should be in both, but only once in each
+    expect(direct.map((n) => n.id)).toContain("B");
+    expect(direct.map((n) => n.id)).toContain("C");
+    expect(indirect.map((n) => n.id)).toContain("D");
+    expect(new Set(direct.map((n) => n.id)).size).toBe(direct.length);
+    expect(new Set(indirect.map((n) => n.id)).size).toBe(indirect.length);
+  });
 });

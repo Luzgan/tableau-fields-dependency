@@ -54,48 +54,6 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
   const indirectReferencingNodes = helpers.getIndirectReferencingNodes(node.id);
   const indirectReferencedNodes = helpers.getIndirectReferencedNodes(node.id);
 
-  const getReferenceCounts = (
-    references: Reference[],
-    nodeId: string,
-    isSource: boolean
-  ) => {
-    return references.reduce(
-      (acc, ref) => {
-        if (
-          (isSource && ref.targetId === nodeId) ||
-          (!isSource && ref.sourceId === nodeId)
-        ) {
-          acc[ref.type]++;
-        }
-        return acc;
-      },
-      { direct: 0, indirect: 0 }
-    );
-  };
-
-  const getReferenceType = (
-    references: Reference[] | undefined,
-    sourceId: string,
-    targetId: string
-  ): "direct" | "indirect" | "unknown" => {
-    if (!references) return "unknown";
-    const ref = references.find(
-      (r) => r.sourceId === sourceId && r.targetId === targetId
-    );
-    return ref?.type || "unknown";
-  };
-
-  const referencingCounts = getReferenceCounts(
-    fileData?.references || [],
-    node.id,
-    false
-  );
-  const referencedCounts = getReferenceCounts(
-    fileData?.references || [],
-    node.id,
-    true
-  );
-
   const renderNodeList = (
     directNodes: Node[],
     indirectNodes: Node[],
@@ -120,7 +78,9 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
 
         {directNodes.map((refNode) => (
           <Box
-            key={refNode.id}
+            key={`${refNode.id}-direct-${
+              isReferencing ? "referencing" : "referenced"
+            }`}
             component={Link}
             to={`/field/${refNode.id}`}
             state={{ from: "reference" }}
@@ -138,7 +98,9 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
               },
             }}
             data-testid="reference-link"
-            data-node-id={refNode.id}
+            data-node-id={`${refNode.id}-direct-${
+              isReferencing ? "referencing" : "referenced"
+            }`}
           >
             <Box
               sx={{
@@ -151,6 +113,13 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
                 <Typography>{refNode.displayName}</Typography>
                 <Typography variant="caption" color="text.secondary">
                   {refNode.type}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 1 }}
+                >
+                  {isReferencing ? "referencing" : "referenced"}
                 </Typography>
               </Box>
               <Typography
@@ -168,7 +137,9 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
 
         {indirectNodes.map((refNode) => (
           <Box
-            key={refNode.id}
+            key={`${refNode.id}-indirect-${
+              isReferencing ? "referencing" : "referenced"
+            }`}
             component={Link}
             to={`/field/${refNode.id}`}
             state={{ from: "reference" }}
@@ -186,7 +157,9 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
               },
             }}
             data-testid="reference-link"
-            data-node-id={refNode.id}
+            data-node-id={`${refNode.id}-indirect-${
+              isReferencing ? "referencing" : "referenced"
+            }`}
           >
             <Box
               sx={{
@@ -199,6 +172,13 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
                 <Typography>{refNode.displayName}</Typography>
                 <Typography variant="caption" color="text.secondary">
                   {refNode.type}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 1 }}
+                >
+                  {isReferencing ? "referencing" : "referenced"}
                 </Typography>
               </Box>
               <Typography

@@ -1,5 +1,14 @@
 import { Node, FileData } from "../types/app.types";
 
+function uniqueNodes(nodes: Node[]): Node[] {
+  const seen = new Set<string>();
+  return nodes.filter((node) => {
+    if (seen.has(node.id)) return false;
+    seen.add(node.id);
+    return true;
+  });
+}
+
 export function getReferencingNodes(
   fileData: FileData,
   nodeId: string
@@ -14,7 +23,7 @@ export function getReferencingNodes(
       if (!node) return false;
       return "id" in node && "name" in node && "type" in node;
     });
-  return nodes;
+  return uniqueNodes(nodes);
 }
 
 export function getReferencedNodes(fileData: FileData, nodeId: string): Node[] {
@@ -28,7 +37,7 @@ export function getReferencedNodes(fileData: FileData, nodeId: string): Node[] {
       if (!node) return false;
       return "id" in node && "name" in node && "type" in node;
     });
-  return nodes;
+  return uniqueNodes(nodes);
 }
 
 export function getIndirectReferencingNodes(
@@ -66,7 +75,7 @@ export function getIndirectReferencingNodes(
   };
 
   findIndirectReferences(nodeId, 1);
-  return Array.from(indirectNodes);
+  return uniqueNodes(Array.from(indirectNodes));
 }
 
 export function getIndirectReferencedNodes(
@@ -104,5 +113,5 @@ export function getIndirectReferencedNodes(
   };
 
   findIndirectReferences(nodeId, 1);
-  return Array.from(indirectNodes);
+  return uniqueNodes(Array.from(indirectNodes));
 }
