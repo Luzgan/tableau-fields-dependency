@@ -17,12 +17,7 @@ import {
 } from "react-router-dom";
 import { useAppContext } from "./AppContext";
 import ReferencesList from "./ReferencesList";
-import {
-  CalculationNode,
-  DatasourceNode,
-  Node,
-  ParameterNode,
-} from "../types/app.types";
+import { CalculationNode, Node, Reference } from "../types/app.types";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 
@@ -59,12 +54,54 @@ function a11yProps(index: number) {
   };
 }
 
+function substituteCalculationDisplayNames(
+  calculation: string,
+  nodesById: Map<string, Node>,
+  references: Reference[]
+): string {
+  // Create a map of matchedText to displayName for calculation nodes
+  const displayNameMap = new Map<string, string>();
+  references.forEach((ref) => {
+    const targetNode = nodesById.get(ref.targetId);
+    if (targetNode && targetNode.type === "calculation") {
+      displayNameMap.set(ref.matchedText, targetNode.displayName);
+    }
+  });
+  // Sort keys by length descending to avoid nested replacement issues
+  const sortedMatches = Array.from(displayNameMap.keys()).sort(
+    (a, b) => b.length - a.length
+  );
+  let substituted = calculation;
+  sortedMatches.forEach((match) => {
+    const displayName = displayNameMap.get(match);
+    if (displayName) {
+      // Replace all occurrences of match with displayName (in brackets)
+      substituted = substituted.split(match).join(`[${displayName}]`);
+    }
+  });
+  return substituted;
+}
+
 function BasicInfo({ field }: { field: Node }) {
+  const { fileData, helpers } = useAppContext();
   const renderCalculationSpecificInfo = (node: CalculationNode) => (
     <>
       <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
         Calculation Properties
       </Typography>
+      {/* Show calculation with display names substituted */}
+      {fileData && node.calculation && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Calculation (with display names)
+          </Typography>
+          <Calculation
+            calculation={node.calculation}
+            nodeId={node.id}
+            useDisplayNames={true}
+          />
+        </Box>
+      )}
       {node.calculation && (
         <Calculation calculation={node.calculation} nodeId={node.id} />
       )}
@@ -148,19 +185,35 @@ function BasicInfo({ field }: { field: Node }) {
 function Calculation({
   calculation,
   nodeId,
+  useDisplayNames = false,
 }: {
   calculation: string;
   nodeId: string;
+  useDisplayNames?: boolean;
 }) {
   const { helpers } = useAppContext();
   const references = helpers.getReferencesForNode(nodeId);
-  console.log(references);
   const sourceField = helpers.getNodeById(nodeId);
+  const { fileData } = useAppContext();
 
   // Create a map of matched text to node ID for quick lookup
   const refMap = new Map(
     references.map((ref) => [ref.matchedText, ref.targetId])
   );
+
+  // If using display names, create a map of matched text to display name
+  const displayNameMap =
+    useDisplayNames && fileData
+      ? new Map(
+          references.map((ref) => {
+            const targetNode = fileData.nodesById.get(ref.targetId);
+            return [
+              ref.matchedText,
+              targetNode?.displayName || ref.matchedText,
+            ];
+          })
+        )
+      : undefined;
 
   // Sort references by length in descending order to handle nested references correctly
   const sortedMatches = Array.from(refMap.keys()).sort(
@@ -208,10 +261,13 @@ function Calculation({
       });
     }
 
-    // Add the link
+    // Add the link (with display name if requested)
     segments.push({
       type: "link",
-      content: nextMatch.text,
+      content:
+        useDisplayNames && displayNameMap
+          ? `[${displayNameMap.get(nextMatch.text) || nextMatch.text}]`
+          : nextMatch.text,
       targetId: nextMatch.targetId,
     });
 
@@ -262,42 +318,43 @@ function Calculation({
 
 // Add this new component for the navigation history
 function FieldNavigationHistory({ currentField }: { currentField: Node }) {
-  const [history, setHistory] = useState<Node[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Update history when field changes
+  // Initialize history based on location.state and currentField
+  const [history, setHistory] = useState<Node[]>(() => {
+    if (!location.state?.from || location.state.from === "list") {
+      return [currentField];
+    }
+    if (location.state.from === "calculation" && location.state.sourceField) {
+      return [location.state.sourceField, currentField];
+    }
+    return [currentField];
+  });
+
+  // Append to history on navigation (except for breadcrumb/back)
   useEffect(() => {
-    setHistory((prev) => {
-      // Don't add if it's the same as the last entry
-      if (prev[prev.length - 1]?.id === currentField.id) {
+    if (
+      location.state?.from !== "breadcrumb" &&
+      location.state?.from !== "back"
+    ) {
+      setHistory((prev) => {
+        if (prev[prev.length - 1]?.id !== currentField.id) {
+          return [...prev, currentField].slice(-5);
+        }
         return prev;
-      }
-
-      // If coming from list, start fresh
-      if (!location.state?.from || location.state.from === "list") {
-        return [currentField];
-      }
-
-      // If this is the first calculation click and history is empty,
-      // we need to include both the source field and the target field
-      if (location.state.from === "calculation" && prev.length === 0) {
-        const sourceField = location.state.sourceField;
-        return sourceField ? [sourceField, currentField] : [currentField];
-      }
-
-      // For all other cases, add to history
-      const newHistory = [...prev, currentField].slice(-5);
-      return newHistory;
-    });
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentField, location.state?.from]);
 
   const handleBack = () => {
     if (history.length > 1) {
-      // Remove current field and navigate to previous
       setHistory((prev) => {
         const newHistory = prev.slice(0, -1);
-        navigate(`/field/${newHistory[newHistory.length - 1].id}`);
+        navigate(`/field/${newHistory[newHistory.length - 1].id}`, {
+          state: { from: "back" },
+        });
         return newHistory;
       });
     }
@@ -306,10 +363,13 @@ function FieldNavigationHistory({ currentField }: { currentField: Node }) {
   const handleBreadcrumbClick =
     (index: number, field: Node) => (e: React.MouseEvent) => {
       e.preventDefault();
-      // Trim history up to clicked item
+      if (index === history.length - 1) {
+        // Already at this field, do nothing
+        return;
+      }
       setHistory((prev) => {
         const newHistory = prev.slice(0, index + 1);
-        navigate(`/field/${field.id}`);
+        navigate(`/field/${field.id}`, { state: { from: "breadcrumb" } });
         return newHistory;
       });
     };
