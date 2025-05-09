@@ -20,6 +20,7 @@ import ReferencesList from "./ReferencesList";
 import { CalculationNode, Node, Reference } from "../types/app.types";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import Graph from "./Graph";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -447,6 +448,7 @@ const FieldDetails: React.FC = () => {
         >
           <Tab label="Basic Info" {...a11yProps(0)} />
           <Tab label="References" {...a11yProps(1)} />
+          <Tab label="Graph" {...a11yProps(2)} />
         </Tabs>
       </Box>
       <TabPanel value={value} index={0}>
@@ -454,6 +456,11 @@ const FieldDetails: React.FC = () => {
       </TabPanel>
       <TabPanel value={value} index={1}>
         <ReferencesList node={field} />
+      </TabPanel>
+      <TabPanel value={value} index={2}>
+        <Box sx={{ height: "60vh", minHeight: 300 }}>
+          <Graph nodeId={field.id} />
+        </Box>
       </TabPanel>
     </Paper>
   );

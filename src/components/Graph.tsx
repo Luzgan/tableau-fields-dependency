@@ -9,26 +9,25 @@ import ReactFlow, {
   useNodesState,
   Handle,
   Position,
+  MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { useAppContext } from "./AppContext";
-import { Node, Reference } from "../types/app.types";
+import { Node as AppNode, Reference } from "../types/app.types";
 
-interface NodeData {
+// Extend NodeData from the app's Node type
+export type NodeData = AppNode & {
   label: string;
-  type: string;
-  caption?: string;
-  id: string;
-}
+};
 
 const CustomNode = ({ data }: { data: NodeData }) => (
   <div
     style={{
       padding: "10px",
       borderRadius: "5px",
-      background: data.type === "column" ? "#e3f2fd" : "#fff3e0",
+      background: data.type === "datasource" ? "#e3f2fd" : "#fff3e0",
       border: "1px solid",
-      borderColor: data.type === "column" ? "#90caf9" : "#ffb74d",
+      borderColor: data.type === "datasource" ? "#90caf9" : "#ffb74d",
       minWidth: "150px",
     }}
     data-testid="node"
@@ -57,10 +56,21 @@ const nodeTypes: NodeTypes = {
   custom: CustomNode,
 };
 
-const Graph: React.FC = () => {
+interface GraphProps {
+  nodeId?: string;
+}
+
+const Graph: React.FC<GraphProps> = ({ nodeId }) => {
   const { fileData, helpers } = useAppContext();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Helper to get marker id based on edge color
+  const getMarkerId = (color: string) => {
+    if (color === "#4caf50") return "arrow-green";
+    if (color === "#ff9800") return "arrow-orange";
+    return "arrow-default";
+  };
 
   const buildNode = useCallback(
     (
@@ -84,10 +94,8 @@ const Graph: React.FC = () => {
         type: "custom",
         position: { x: 0, y: 0 },
         data: {
+          ...node,
           label: node.displayName,
-          type: node.type,
-          caption: node.caption,
-          id: node.id,
         },
       };
 
@@ -108,6 +116,7 @@ const Graph: React.FC = () => {
             processedNodes,
             processedEdges
           );
+          const color = ref.type === "direct" ? "#4caf50" : "#ff9800";
           result.nodes.push(...childResult.nodes);
           result.edges.push(
             {
@@ -115,10 +124,16 @@ const Graph: React.FC = () => {
               source: ref.sourceId,
               target: ref.targetId,
               style: {
-                stroke: ref.type === "direct" ? "#4caf50" : "#ff9800",
-                strokeWidth: 2,
+                stroke: color,
+                strokeWidth: 3,
               },
               animated: ref.type === "indirect",
+              markerEnd: {
+                type: MarkerType.Arrow,
+                width: 20,
+                height: 20,
+                color: color,
+              },
             },
             ...childResult.edges
           );
@@ -142,11 +157,19 @@ const Graph: React.FC = () => {
       edges: [],
     };
 
-    Array.from(fileData.nodesById.values()).forEach((node: Node) => {
-      const nodeResult = buildNode(node.id, processedNodes, processedEdges);
+    if (nodeId) {
+      // Only show the subgraph for this node
+      const nodeResult = buildNode(nodeId, processedNodes, processedEdges);
       result.nodes.push(...nodeResult.nodes);
       result.edges.push(...nodeResult.edges);
-    });
+    } else {
+      // Show the full graph
+      Array.from(fileData.nodesById.values()).forEach((node: AppNode) => {
+        const nodeResult = buildNode(node.id, processedNodes, processedEdges);
+        result.nodes.push(...nodeResult.nodes);
+        result.edges.push(...nodeResult.edges);
+      });
+    }
 
     // Position nodes in a grid layout
     const nodesPerRow = Math.ceil(Math.sqrt(result.nodes.length));
@@ -158,7 +181,7 @@ const Graph: React.FC = () => {
     });
 
     return result;
-  }, [fileData?.nodesById, fileData?.references, buildNode]);
+  }, [fileData?.nodesById, fileData?.references, buildNode, nodeId]);
 
   React.useEffect(() => {
     setNodes(graphData.nodes);
