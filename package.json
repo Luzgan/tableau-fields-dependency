@@ -19,6 +19,7 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "@types/dagre": "^0.7.52",
     "@types/jest": "^29.5.12",
     "@types/lodash": "^4.17.16",
     "@types/node": "^22.14.0",
@@ -40,6 +41,7 @@
     "@mui/icons-material": "^6.1.4",
     "@mui/material": "^6.1.4",
     "@vitejs/plugin-react": "^4.3.4",
+    "dagre": "0.8.5",
     "fast-xml-parser": "^4.5.3",
     "lodash": "^4.17.21",
     "react-router-dom": "^6.27.0"

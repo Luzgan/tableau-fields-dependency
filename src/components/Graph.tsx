@@ -11,6 +11,7 @@ import ReactFlow, {
   Position,
   MarkerType,
 } from "reactflow";
+import dagre from "dagre";
 import "reactflow/dist/style.css";
 import { useAppContext } from "./AppContext";
 import { Node as AppNode, Reference } from "../types/app.types";
@@ -20,37 +21,50 @@ export type NodeData = AppNode & {
   label: string;
 };
 
-const CustomNode = ({ data }: { data: NodeData }) => (
-  <div
-    style={{
-      padding: "10px",
-      borderRadius: "5px",
-      background: data.type === "datasource" ? "#e3f2fd" : "#fff3e0",
-      border: "1px solid",
-      borderColor: data.type === "datasource" ? "#90caf9" : "#ffb74d",
-      minWidth: "150px",
-    }}
-    data-testid="node"
-    data-node-id={data.id}
-  >
-    <Handle type="target" position={Position.Top} />
-    <div style={{ fontWeight: "bold" }}>{data.label}</div>
-    {data.caption && (
-      <div style={{ fontSize: "0.8em", color: "#666" }}>{data.caption}</div>
-    )}
+const getNodeColors = (type: string) => {
+  switch (type) {
+    case "datasource":
+      return { background: "#e3f2fd", border: "#90caf9" };
+    case "calculation":
+      return { background: "#fff3e0", border: "#ffb74d" };
+    case "parameter":
+      return { background: "#ede7f6", border: "#b39ddb" };
+    default:
+      return { background: "#f5f5f5", border: "#bdbdbd" };
+  }
+};
+
+const CustomNode = ({ data }: { data: NodeData }) => {
+  const { background, border } = getNodeColors(data.type);
+  return (
     <div
       style={{
-        fontSize: "0.8em",
-        color: "#666",
-        fontStyle: "italic",
-        marginTop: "4px",
+        padding: "10px",
+        borderRadius: "5px",
+        background,
+        border: "1px solid",
+        borderColor: border,
+        minWidth: "150px",
       }}
+      data-testid="node"
+      data-node-id={data.id}
     >
-      {data.type}
+      <Handle type="target" position={Position.Top} />
+      <div style={{ fontWeight: "bold" }}>{data.label}</div>
+      <div
+        style={{
+          fontSize: "0.8em",
+          color: "#666",
+          fontStyle: "italic",
+          marginTop: "4px",
+        }}
+      >
+        {data.type}
+      </div>
+      <Handle type="source" position={Position.Bottom} />
     </div>
-    <Handle type="source" position={Position.Bottom} />
-  </div>
-);
+  );
+};
 
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
@@ -59,6 +73,43 @@ const nodeTypes: NodeTypes = {
 interface GraphProps {
   nodeId?: string;
 }
+
+const nodeWidth = 200;
+const nodeHeight = 80;
+
+const getLayoutedElements = (
+  nodes: FlowNode[],
+  edges: Edge[],
+  direction = "TB"
+) => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+  const isHorizontal = direction === "LR";
+  dagreGraph.setGraph({ rankdir: direction });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  nodes.forEach((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    node.position = {
+      x: nodeWithPosition.x - nodeWidth / 2,
+      y: nodeWithPosition.y - nodeHeight / 2,
+    };
+    node.targetPosition = isHorizontal ? Position.Left : Position.Top;
+    node.sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
+  });
+
+  return { nodes, edges };
+};
 
 const Graph: React.FC<GraphProps> = ({ nodeId }) => {
   const { fileData, helpers } = useAppContext();
@@ -76,7 +127,8 @@ const Graph: React.FC<GraphProps> = ({ nodeId }) => {
     (
       nodeId: string,
       processedNodes: Set<string>,
-      processedEdges: Set<string>
+      processedEdges: Set<string>,
+      depth: number = 0
     ): { nodes: FlowNode<NodeData>[]; edges: Edge[] } => {
       if (processedNodes.has(nodeId)) {
         return { nodes: [], edges: [] };
@@ -114,9 +166,14 @@ const Graph: React.FC<GraphProps> = ({ nodeId }) => {
           const childResult = buildNode(
             ref.targetId,
             processedNodes,
-            processedEdges
+            processedEdges,
+            depth + 1
           );
-          const color = ref.type === "direct" ? "#4caf50" : "#ff9800";
+          // Colorblind-friendly, accessible colors
+          const directColor = "#1976d2"; // blue
+          const indirectColor = "#ffb300"; // amber
+          const isDirect = depth === 0;
+          const color = isDirect ? directColor : indirectColor;
           result.nodes.push(...childResult.nodes);
           result.edges.push(
             {
@@ -125,13 +182,13 @@ const Graph: React.FC<GraphProps> = ({ nodeId }) => {
               target: ref.targetId,
               style: {
                 stroke: color,
-                strokeWidth: 3,
+                strokeWidth: 2,
               },
-              animated: ref.type === "indirect",
+              animated: !isDirect,
               markerEnd: {
                 type: MarkerType.Arrow,
-                width: 20,
-                height: 20,
+                width: 10,
+                height: 10,
                 color: color,
               },
             },
@@ -159,28 +216,25 @@ const Graph: React.FC<GraphProps> = ({ nodeId }) => {
 
     if (nodeId) {
       // Only show the subgraph for this node
-      const nodeResult = buildNode(nodeId, processedNodes, processedEdges);
+      const nodeResult = buildNode(nodeId, processedNodes, processedEdges, 0);
       result.nodes.push(...nodeResult.nodes);
       result.edges.push(...nodeResult.edges);
     } else {
       // Show the full graph
       Array.from(fileData.nodesById.values()).forEach((node: AppNode) => {
-        const nodeResult = buildNode(node.id, processedNodes, processedEdges);
+        const nodeResult = buildNode(
+          node.id,
+          processedNodes,
+          processedEdges,
+          0
+        );
         result.nodes.push(...nodeResult.nodes);
         result.edges.push(...nodeResult.edges);
       });
     }
 
-    // Position nodes in a grid layout
-    const nodesPerRow = Math.ceil(Math.sqrt(result.nodes.length));
-    result.nodes.forEach((node, index) => {
-      node.position = {
-        x: (index % nodesPerRow) * 250,
-        y: Math.floor(index / nodesPerRow) * 150,
-      };
-    });
-
-    return result;
+    // Use Dagre for layout
+    return getLayoutedElements(result.nodes, result.edges, "TB");
   }, [fileData?.nodesById, fileData?.references, buildNode, nodeId]);
 
   React.useEffect(() => {
