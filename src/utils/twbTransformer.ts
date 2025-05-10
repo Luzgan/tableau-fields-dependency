@@ -235,27 +235,11 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
         const relationName = ref.datasource ?? "";
         const fieldName = ref.field;
 
-        console.log(`Processing mapping: ${mapping.key} -> ${mapping.value}`);
-        console.log(
-          `Looking for relation: ${relationName} and field: ${fieldName}`
-        );
-
         const relation = findRelationByName(relations, relationName);
-        if (!relation) {
-          console.log(`Relation not found: ${relationName}`);
-          return;
-        }
-        if (!relation.columns) {
-          console.log(`No columns in relation: ${relationName}`);
-          return;
-        }
 
         const columns = ensureArray(relation.columns.column);
         const column = columns.find((col) => col.name === fieldName);
         if (!column) {
-          console.log(
-            `Column not found: ${fieldName} in relation ${relationName}`
-          );
           return;
         }
 
@@ -275,7 +259,6 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
           datasourceName: ds.name,
         };
         nodesById.set(id, fieldNode);
-        console.log(`Created node for ${mapping.key}`);
       });
     } else {
       // Process columns directly from relations
@@ -350,7 +333,20 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
       const dataType = convertDataType(col.datatype);
       const role = convertRole(col.role);
 
-      if ("calculation" in col) {
+      if (ds.name === "Parameters") {
+        // Create parameter node
+        const paramNode: ParameterNode = {
+          id,
+          name,
+          type: "parameter",
+          caption,
+          dataType,
+          role,
+          displayName,
+          datasourceName: ds.name,
+        };
+        nodesById.set(id, paramNode);
+      } else if ("calculation" in col) {
         // Create calculation node
         const calcNode: CalculationNode = {
           id,
@@ -364,19 +360,6 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
           datasourceName: ds.name,
         };
         nodesById.set(id, calcNode);
-      } else if (ds.name === "Parameters") {
-        // Create parameter node
-        const paramNode: ParameterNode = {
-          id,
-          name,
-          type: "parameter",
-          caption,
-          dataType,
-          role,
-          displayName,
-          datasourceName: ds.name,
-        };
-        nodesById.set(id, paramNode);
       } else {
         // Check if this is an overwrite for a relation column
         const existingNode = nodesById.get(id);
