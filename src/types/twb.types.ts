@@ -7,6 +7,7 @@ export interface ParameterColumn {
   datatype: string;
   role: string;
   caption?: string;
+  hidden?: string;
 }
 
 /**
@@ -20,6 +21,7 @@ export interface CalculatedColumn {
   calculation: {
     formula: string;
   };
+  hidden?: string;
 }
 
 export interface DataSourceColumn {
@@ -27,6 +29,7 @@ export interface DataSourceColumn {
   datatype: string;
   role: string;
   caption?: string;
+  hidden?: string;
 }
 
 export interface RelationColumn {

@@ -11,6 +11,7 @@ export interface BaseNode {
   role: ColumnRole;
   displayName: string;
   datasourceName: string;
+  hidden?: boolean;
 }
 
 export interface DatasourceNode extends BaseNode {

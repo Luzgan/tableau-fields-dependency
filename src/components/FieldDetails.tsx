@@ -140,6 +140,14 @@ function BasicInfo({ field }: { field: Node }) {
           {field.role}
         </Typography>
       </Box>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle2" color={colors.text.secondary}>
+          Is hidden
+        </Typography>
+        <Typography sx={{ textTransform: "capitalize" }}>
+          {field.hidden ? "Yes" : "No"}
+        </Typography>
+      </Box>
       {field.dataType && (
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle2" color={colors.text.secondary}>

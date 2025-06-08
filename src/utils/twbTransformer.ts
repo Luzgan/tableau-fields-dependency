@@ -257,6 +257,7 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
           role,
           displayName: mapping.key.replace(/[\[\]]/g, ""),
           datasourceName: ds.name,
+          hidden: column.hidden === "true",
         };
         nodesById.set(id, fieldNode);
       });
@@ -329,6 +330,7 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
       const id = generateNodeId(ds.name, col.name);
       const name = col.name;
       const caption = col.caption;
+      const hidden = col.hidden === "true";
       const displayName = caption || name.replace(/[\[\]]/g, "");
       const dataType = convertDataType(col.datatype);
       const role = convertRole(col.role);
@@ -344,6 +346,7 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
           role,
           displayName,
           datasourceName: ds.name,
+          hidden,
         };
         nodesById.set(id, paramNode);
       } else if ("calculation" in col) {
@@ -358,6 +361,7 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
           displayName,
           calculation: col.calculation.formula,
           datasourceName: ds.name,
+          hidden,
         };
         nodesById.set(id, calcNode);
       } else {
@@ -369,6 +373,7 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
           existingNode.displayName = displayName;
           existingNode.role = role;
           existingNode.dataType = dataType;
+          existingNode.hidden = hidden;
         } else {
           nodesById.set(id, {
             id,
@@ -379,6 +384,7 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
             role,
             displayName,
             datasourceName: ds.name,
+            hidden,
           });
         }
       }
