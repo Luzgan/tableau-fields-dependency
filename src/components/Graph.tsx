@@ -15,6 +15,7 @@ import dagre from "dagre";
 import "reactflow/dist/style.css";
 import { useAppContext } from "./AppContext";
 import { Node as AppNode, Reference } from "../types/app.types";
+import colors from "../theme/colors";
 
 // Extend NodeData from the app's Node type
 export type NodeData = AppNode & {
@@ -24,13 +25,25 @@ export type NodeData = AppNode & {
 const getNodeColors = (type: string) => {
   switch (type) {
     case "datasource":
-      return { background: "#e3f2fd", border: "#90caf9" };
+      return {
+        background: colors.datasource.background,
+        border: colors.datasource.border,
+      };
     case "calculation":
-      return { background: "#fff3e0", border: "#ffb74d" };
+      return {
+        background: colors.calculation.background,
+        border: colors.calculation.border,
+      };
     case "parameter":
-      return { background: "#ede7f6", border: "#b39ddb" };
+      return {
+        background: colors.parameter.background,
+        border: colors.parameter.border,
+      };
     default:
-      return { background: "#f5f5f5", border: "#bdbdbd" };
+      return {
+        background: colors.background.panel,
+        border: colors.border.light,
+      };
   }
 };
 
@@ -116,13 +129,6 @@ const Graph: React.FC<GraphProps> = ({ nodeId }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // Helper to get marker id based on edge color
-  const getMarkerId = (color: string) => {
-    if (color === "#4caf50") return "arrow-green";
-    if (color === "#ff9800") return "arrow-orange";
-    return "arrow-default";
-  };
-
   const buildNode = useCallback(
     (
       nodeId: string,
@@ -170,8 +176,8 @@ const Graph: React.FC<GraphProps> = ({ nodeId }) => {
             depth + 1
           );
           // Colorblind-friendly, accessible colors
-          const directColor = "#1976d2"; // blue
-          const indirectColor = "#ffb300"; // amber
+          const directColor = colors.edge.direct;
+          const indirectColor = colors.edge.indirect;
           const isDirect = depth === 0;
           const color = isDirect ? directColor : indirectColor;
           result.nodes.push(...childResult.nodes);
@@ -259,7 +265,7 @@ const Graph: React.FC<GraphProps> = ({ nodeId }) => {
         }}
       >
         <Controls />
-        <Background color="#aaa" gap={16} />
+        <Background color={colors.background.graphGrid} gap={16} />
       </ReactFlow>
     </div>
   );

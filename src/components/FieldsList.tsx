@@ -19,32 +19,29 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "./AppContext";
 import { Node, NodeType } from "../types/app.types";
+import colors from "../theme/colors";
 
 const nodeTypeConfig = {
   datasource: {
     icon: ColumnIcon,
-    color: "#9c27b0", // purple for columns
+    color: colors.datasource.border, // Using datasource border color
     label: "Data source fields",
   },
   calculation: {
     icon: CalculationIcon,
-    color: "#d32f2f", // red for calculations
+    color: colors.calculation.border, // Using calculation border color
     label: "Calculated fields",
   },
   parameter: {
     icon: ParameterIcon,
-    color: "#f57c00", // orange for parameters
+    color: colors.parameter.border, // Using parameter border color
     label: "Parameters",
   },
 };
 
 const roleConfig = {
-  measure: {
-    color: "#2e7d32", // green (Tableau's measure color)
-  },
-  dimension: {
-    color: "#1976d2", // blue (Tableau's dimension color)
-  },
+  measure: { color: colors.measure.border },
+  dimension: { color: colors.dimension.border },
 };
 
 const FieldsList: React.FC = () => {

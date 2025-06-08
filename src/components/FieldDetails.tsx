@@ -21,6 +21,7 @@ import { CalculationNode, Node, Reference } from "../types/app.types";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import Graph from "./Graph";
+import colors from "../theme/colors";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -55,34 +56,6 @@ function a11yProps(index: number) {
   };
 }
 
-function substituteCalculationDisplayNames(
-  calculation: string,
-  nodesById: Map<string, Node>,
-  references: Reference[]
-): string {
-  // Create a map of matchedText to displayName for calculation nodes
-  const displayNameMap = new Map<string, string>();
-  references.forEach((ref) => {
-    const targetNode = nodesById.get(ref.targetId);
-    if (targetNode && targetNode.type === "calculation") {
-      displayNameMap.set(ref.matchedText, targetNode.displayName);
-    }
-  });
-  // Sort keys by length descending to avoid nested replacement issues
-  const sortedMatches = Array.from(displayNameMap.keys()).sort(
-    (a, b) => b.length - a.length
-  );
-  let substituted = calculation;
-  sortedMatches.forEach((match) => {
-    const displayName = displayNameMap.get(match);
-    if (displayName) {
-      // Replace all occurrences of match with displayName (in brackets)
-      substituted = substituted.split(match).join(`[${displayName}]`);
-    }
-  });
-  return substituted;
-}
-
 function BasicInfo({ field }: { field: Node }) {
   const { fileData, helpers } = useAppContext();
   const renderCalculationSpecificInfo = (node: CalculationNode) => (
@@ -93,7 +66,7 @@ function BasicInfo({ field }: { field: Node }) {
       {/* Show calculation with display names substituted */}
       {fileData && node.calculation && (
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
+          <Typography variant="subtitle2" color={colors.text.secondary}>
             Calculation (with display names)
           </Typography>
           <Calculation
@@ -115,20 +88,20 @@ function BasicInfo({ field }: { field: Node }) {
         Basic Information
       </Typography>
       <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" color={colors.text.secondary}>
           Name
         </Typography>
         <Typography>{field.displayName}</Typography>
       </Box>
       {field.name !== field.displayName && (
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
+          <Typography variant="subtitle2" color={colors.text.secondary}>
             Internal Name
           </Typography>
           <Typography
             sx={{
               fontFamily: "monospace",
-              backgroundColor: "grey.100",
+              backgroundColor: colors.background.panel,
               px: 1,
               py: 0.5,
               borderRadius: 0.5,
@@ -141,14 +114,14 @@ function BasicInfo({ field }: { field: Node }) {
       )}
       {field.caption && (
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
+          <Typography variant="subtitle2" color={colors.text.secondary}>
             Caption
           </Typography>
           <Typography>{field.caption}</Typography>
         </Box>
       )}
       <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" color={colors.text.secondary}>
           Type
         </Typography>
         <Typography>
@@ -160,7 +133,7 @@ function BasicInfo({ field }: { field: Node }) {
         </Typography>
       </Box>
       <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" color={colors.text.secondary}>
           Role
         </Typography>
         <Typography sx={{ textTransform: "capitalize" }}>
@@ -169,7 +142,7 @@ function BasicInfo({ field }: { field: Node }) {
       </Box>
       {field.dataType && (
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary">
+          <Typography variant="subtitle2" color={colors.text.secondary}>
             Data Type
           </Typography>
           <Typography sx={{ textTransform: "capitalize" }}>
@@ -280,13 +253,13 @@ function Calculation({
       component="pre"
       sx={{
         p: 2,
-        backgroundColor: "grey.100",
+        backgroundColor: colors.background.panel,
         borderRadius: 1,
         overflow: "auto",
         fontSize: "0.875rem",
         fontFamily: "monospace",
         "& a": {
-          color: "primary.main",
+          color: colors.edge.direct,
           textDecoration: "none",
           "&:hover": {
             textDecoration: "underline",
@@ -300,7 +273,7 @@ function Calculation({
             key={index}
             to={`/field/${segment.targetId}`}
             style={{
-              color: "#1976d2",
+              color: colors.edge.direct,
               textDecoration: "none",
             }}
             state={{ from: "calculation", sourceField }}
@@ -401,7 +374,7 @@ function FieldNavigationHistory({ currentField }: { currentField: Node }) {
               data-testid={`history-item-${index}`}
               state={{ from: "breadcrumb" }}
               style={{
-                color: isLast ? "#1976d2" : "#666",
+                color: isLast ? colors.edge.direct : colors.text.secondary,
                 textDecoration: "none",
                 fontWeight: isLast ? 600 : 400,
               }}
