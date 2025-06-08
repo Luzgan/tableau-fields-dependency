@@ -2,7 +2,7 @@ import { Box, Tab, Tabs, Typography } from "@mui/material";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "./AppContext";
-import { Node, Reference } from "../types/app.types";
+import { Node } from "../types/app.types";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -43,7 +43,7 @@ interface ReferencesListProps {
 
 const ReferencesList: React.FC<ReferencesListProps> = ({ node }) => {
   const [value, setValue] = useState(0);
-  const { helpers, fileData } = useAppContext();
+  const { helpers } = useAppContext();
 
   const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
