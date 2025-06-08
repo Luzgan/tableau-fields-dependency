@@ -17,7 +17,7 @@ import {
 } from "react-router-dom";
 import { useAppContext } from "./AppContext";
 import ReferencesList from "./ReferencesList";
-import { CalculationNode, Node, Reference } from "../types/app.types";
+import { CalculationNode, Node } from "../types/app.types";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import Graph from "./Graph";
@@ -57,7 +57,7 @@ function a11yProps(index: number) {
 }
 
 function BasicInfo({ field }: { field: Node }) {
-  const { fileData, helpers } = useAppContext();
+  const { fileData } = useAppContext();
   const renderCalculationSpecificInfo = (node: CalculationNode) => (
     <>
       <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>

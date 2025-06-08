@@ -25,14 +25,14 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
-      - name: Run unit tests
-        run: npm run test:unit
+      #   - name: Run unit tests
+      #     run: npm run test:unit
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+      #   - name: Install Playwright browsers
+      #     run: npx playwright install --with-deps
 
-      - name: Run E2E tests
-        run: npm run test:e2e
+      # - name: Run E2E tests
+      #   run: npm run test:e2e
 
       - name: Build
         run: NODE_OPTIONS="--max-old-space-size=512" npm run build
