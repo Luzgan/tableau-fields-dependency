@@ -1,0 +1,68 @@
+{
+  "fileNaming": {
+    "tests": {
+      "e2e": {
+        "pattern": "*.spec.ts",
+        "description": "E2E test files should end with .spec.ts and should be in the __tests__/e2e directory. Should be camelCase.",
+        "examples": [
+          "login.spec.ts",
+          "navigation.spec.ts",
+          "fieldNavigation.spec.ts"
+        ]
+      },
+      "unit": {
+        "pattern": "*.test.ts",
+        "description": "Unit test files should end with .test.ts and should be in the __tests__/unit directory. Should be camelCase.",
+        "examples": [
+          "parser.test.ts",
+          "transformer.test.ts",
+          "twbParser.test.ts"
+        ]
+      },
+      "component": {
+        "pattern": "*.test.tsx",
+        "description": "React component tests should end with .test.tsx and should be in the __tests__/unit directory. Should be PascalCase.",
+        "examples": ["Button.test.tsx", "Form.test.tsx"]
+      }
+    },
+    "components": {
+      "pattern": "*.tsx",
+      "description": "React components should be PascalCase and end with .tsx",
+      "examples": ["Button.tsx", "UserProfile.tsx"]
+    },
+    "utils": {
+      "pattern": "*.ts",
+      "description": "Utility files should be camelCase and end with .ts",
+      "examples": ["formatDate.ts", "parseConfig.ts"]
+    },
+    "types": {
+      "pattern": "*.types.ts",
+      "description": "Type definition files should end with .types.ts. Should be camelCase.",
+      "examples": ["api.types.ts", "user.types.ts"]
+    }
+  },
+  "directoryStructure": {
+    "__tests__": {
+      "e2e": "End-to-end tests using Playwright",
+      "unit": "Unit tests using Jest"
+    },
+    "src": {
+      "components": "React components",
+      "utils": "Utility functions and helpers",
+      "types": "TypeScript type definitions",
+      "hooks": "React hooks"
+    }
+  },
+  "testingConventions": {
+    "e2e": {
+      "selectors": {
+        "pattern": "data-testid=\"*\"",
+        "description": "Use data-testid for test selectors",
+        "examples": [
+          "data-testid=\"submit-button\"",
+          "data-testid=\"user-list\""
+        ]
+      }
+    }
+  }
+}

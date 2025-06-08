@@ -1,3 +1,8 @@
 .vscode/*
 test-file.twb
 node_modules
+example-files
+
+# Logs
+logs/
+*.log
