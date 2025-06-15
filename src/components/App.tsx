@@ -5,14 +5,16 @@ import {
   Typography,
   createTheme,
   IconButton,
+  Tooltip,
 } from "@mui/material";
-import { Clear } from "@mui/icons-material";
-import React, { useRef } from "react";
+import { Clear, Update, Favorite } from "@mui/icons-material";
+import React, { useRef, useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { NotificationProvider } from "./Notification";
 import { useAppContext } from "./AppContext";
 import FieldsTab from "./FieldsTab";
 import FileUpload from "./FileUpload";
+import Changelog from "./Changelog";
 
 const theme = createTheme();
 
@@ -21,6 +23,7 @@ function AppContent() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasLoadedFile = fileData !== null;
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
 
   const handleClearFile = () => {
     setFileData(null);
@@ -29,6 +32,10 @@ function AppContent() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const handleSupportClick = () => {
+    window.open("https://ko-fi.com/lukaszholc", "_blank");
   };
 
   return (
@@ -62,7 +69,7 @@ function AppContent() {
           <Typography variant="h6" component="div" sx={{ fontSize: "1.1rem" }}>
             Tableau Fields Dependency
           </Typography>
-          <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             {hasLoadedFile && (
               <>
                 <Typography
@@ -92,6 +99,46 @@ function AppContent() {
               </>
             )}
             <FileUpload fileInputRef={fileInputRef} />
+            <Box
+              sx={{
+                borderLeft: 1,
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                height: 24,
+                mx: 1,
+              }}
+            />
+            <Tooltip title="What's New" placement="bottom">
+              <IconButton
+                size="small"
+                onClick={() => setIsChangelogOpen(true)}
+                aria-label="What's New"
+                sx={{
+                  color: "primary.contrastText",
+                  p: 0.5,
+                  "&:hover": {
+                    bgcolor: "rgba(255, 255, 255, 0.1)",
+                  },
+                }}
+              >
+                <Update fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Support the Project" placement="bottom">
+              <IconButton
+                size="small"
+                onClick={handleSupportClick}
+                aria-label="Support"
+                sx={{
+                  color: "primary.contrastText",
+                  p: 0.5,
+                  "&:hover": {
+                    bgcolor: "rgba(255, 255, 255, 0.1)",
+                  },
+                }}
+              >
+                <Favorite fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
         </Box>
       </Box>
@@ -114,6 +161,10 @@ function AppContent() {
           Upload a Tableau workbook to view fields
         </Box>
       )}
+      <Changelog
+        open={isChangelogOpen}
+        onClose={() => setIsChangelogOpen(false)}
+      />
     </Box>
   );
 }
