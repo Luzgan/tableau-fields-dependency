@@ -10,7 +10,11 @@ export const changelogData: ChangelogEntry[] = [
     version: "1.1.0",
     date: "2025-06-15",
     type: "feature",
-    changes: ["Added changelog feature", "Improved field visualization"],
+    changes: [
+      "Added changelog feature",
+      "Improved field visualization",
+      "Added support us page for donations",
+    ],
   },
   {
     version: "1.0.0",
