@@ -3,6 +3,7 @@ test-file.twb
 node_modules
 example-files
 
+dist
 # Logs
 logs/
 *.log
