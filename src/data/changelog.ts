@@ -14,6 +14,7 @@ export const changelogData: ChangelogEntry[] = [
       "Added changelog feature",
       "Improved field visualization",
       "Added support us page for donations",
+      "Added GitHub issues page",
     ],
   },
   {
