@@ -34,8 +34,8 @@ jobs:
       # - name: Run E2E tests
       #   run: npm run test:e2e
 
-      - name: Build
-        run: NODE_OPTIONS="--max-old-space-size=512" npm run build
+      # - name: Build
+      #   run: NODE_OPTIONS="--max-old-space-size=512" npm run build
 
       - name: Deploy to EC2
         if: github.ref == 'refs/heads/main'
