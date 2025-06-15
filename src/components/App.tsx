@@ -7,7 +7,7 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material";
-import { Clear, Update, Favorite } from "@mui/icons-material";
+import { Clear, Update, Favorite, GitHub } from "@mui/icons-material";
 import React, { useRef, useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { NotificationProvider } from "./Notification";
@@ -36,6 +36,13 @@ function AppContent() {
 
   const handleSupportClick = () => {
     window.open("https://ko-fi.com/lukaszholc", "_blank");
+  };
+
+  const handleGitHubClick = () => {
+    window.open(
+      "https://github.com/Luzgan/tableau-fields-dependency/issues",
+      "_blank"
+    );
   };
 
   return (
@@ -121,6 +128,25 @@ function AppContent() {
                 }}
               >
                 <Update fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip
+              title="Report Issues & Request Features"
+              placement="bottom"
+            >
+              <IconButton
+                size="small"
+                onClick={handleGitHubClick}
+                aria-label="GitHub Issues"
+                sx={{
+                  color: "primary.contrastText",
+                  p: 0.5,
+                  "&:hover": {
+                    bgcolor: "rgba(255, 255, 255, 0.1)",
+                  },
+                }}
+              >
+                <GitHub fontSize="small" />
               </IconButton>
             </Tooltip>
             <Tooltip title="Support the Project" placement="bottom">
