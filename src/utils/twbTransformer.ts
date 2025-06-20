@@ -394,7 +394,7 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
   // Create and resolve references for all calculation nodes
   for (const node of nodesById.values()) {
     if (node.type === "calculation") {
-      const fieldRefs = extractReferences(node.calculation);
+      const fieldRefs = extractReferences(node?.calculation ?? "");
       fieldRefs.forEach(({ datasource, field, matchedText }) => {
         // Resolve targetId immediately
         const unresolvedReference: UnresolvedReference = {

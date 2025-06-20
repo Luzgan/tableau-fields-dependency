@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: "1.1.1",
+    date: "2025-06-20",
+    type: "fix",
+    changes: ["Fixed issue with calculation nodes - groups"],
+  },
+  {
     version: "1.1.0",
     date: "2025-06-15",
     type: "feature",
