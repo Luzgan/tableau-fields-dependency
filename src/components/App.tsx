@@ -74,7 +74,7 @@ function AppContent() {
           }}
         >
           <Typography variant="h6" component="div" sx={{ fontSize: "1.1rem" }}>
-            Tableau Fields Dependency
+            Tableau Workbook Explorer
           </Typography>
           <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             {hasLoadedFile && (
