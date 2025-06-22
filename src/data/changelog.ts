@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: "1.1.2",
+    date: "2025-06-22",
+    type: "improvement",
+    changes: ["Changed the name to fit the domain name"],
+  },
+  {
     version: "1.1.1",
     date: "2025-06-20",
     type: "fix",
