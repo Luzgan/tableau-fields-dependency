@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: "1.1.3",
+    date: "2025-06-25",
+    type: "improvement",
+    changes: ["Added footer with author information"],
+  },
+  {
     version: "1.1.2",
     date: "2025-06-22",
     type: "improvement",
