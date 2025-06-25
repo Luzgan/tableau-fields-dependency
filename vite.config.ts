@@ -23,11 +23,8 @@ export default defineConfig({
             if (id.includes("react-router")) {
               return "router";
             }
-            if (id.includes("@mui/material") || id.includes("@emotion")) {
-              return "mui-core";
-            }
-            if (id.includes("@mui/icons")) {
-              return "mui-icons";
+            if (id.includes("@mui") || id.includes("@emotion")) {
+              return "mui-vendor";
             }
             if (id.includes("dagre")) {
               return "graph";
