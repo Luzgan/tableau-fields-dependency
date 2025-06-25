@@ -16,22 +16,8 @@ export default defineConfig({
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash].[ext]",
         manualChunks: (id) => {
+          // Keep all vendor dependencies together to prevent React initialization issues
           if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "react-vendor";
-            }
-            if (id.includes("react-router")) {
-              return "router";
-            }
-            if (id.includes("@mui") || id.includes("@emotion")) {
-              return "mui-vendor";
-            }
-            if (id.includes("dagre")) {
-              return "graph";
-            }
-            if (id.includes("lodash") || id.includes("fast-xml-parser")) {
-              return "utils";
-            }
             return "vendor";
           }
         },
