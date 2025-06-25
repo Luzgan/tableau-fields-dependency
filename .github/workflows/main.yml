@@ -55,8 +55,8 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "dist/*"
-          target: "/home/${{ secrets.EC2_USERNAME }}/tableau-fields-dependency/dist/"
+          source: "dist/"
+          target: "/home/${{ secrets.EC2_USERNAME }}/tableau-fields-dependency/"
 
       - name: Deploy to EC2
         if: github.ref == 'refs/heads/main'
@@ -73,7 +73,14 @@ jobs:
             ls -la
             echo "Dist directory contents:"
             ls -la dist/
+            echo "Dist/assets directory contents:"
+            ls -la dist/assets/
+            echo "Checking index.html content:"
+            head -20 dist/index.html
             echo "Installing production dependencies..."
             npm ci --only=production
+            echo "Restarting service..."
             sudo systemctl restart tableau-fields-dependency
+            echo "Service status:"
+            sudo systemctl status tableau-fields-dependency
             echo "Deployment completed"
