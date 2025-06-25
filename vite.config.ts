@@ -10,31 +10,40 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: false,
     minify: "esbuild",
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 300,
     rollupOptions: {
       output: {
-        entryFileNames: "assets/[name]-[hash].js",
-        chunkFileNames: "assets/[name]-[hash].js",
-        assetFileNames: "assets/[name]-[hash].[ext]",
+        entryFileNames: "assets/[name].js",
+        chunkFileNames: "assets/[name].js",
+        assetFileNames: "assets/[name].[ext]",
         manualChunks: (id) => {
           if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "react-vendor";
+            if (id.includes("react")) {
+              return "react";
+            }
+            if (id.includes("react-dom")) {
+              return "react-dom";
             }
             if (id.includes("react-router")) {
               return "router";
             }
-            if (id.includes("@mui/material") || id.includes("@emotion")) {
-              return "mui-core";
+            if (id.includes("@mui/material")) {
+              return "mui-material";
             }
             if (id.includes("@mui/icons")) {
               return "mui-icons";
             }
-            if (id.includes("dagre")) {
-              return "graph";
+            if (id.includes("@emotion")) {
+              return "emotion";
             }
-            if (id.includes("lodash") || id.includes("fast-xml-parser")) {
-              return "utils";
+            if (id.includes("dagre")) {
+              return "dagre";
+            }
+            if (id.includes("lodash")) {
+              return "lodash";
+            }
+            if (id.includes("fast-xml-parser")) {
+              return "xml-parser";
             }
             return "vendor";
           }
@@ -43,24 +52,13 @@ export default defineConfig({
       external: ["express"],
     },
     target: "es2015",
-    cssCodeSplit: true,
-    assetsInlineLimit: 4096,
+    cssCodeSplit: false,
+    assetsInlineLimit: 1024,
     reportCompressedSize: false,
     emptyOutDir: true,
   },
   optimizeDeps: {
-    include: [
-      "react",
-      "react-dom",
-      "react-router-dom",
-      "@mui/material",
-      "@mui/icons-material",
-      "@emotion/react",
-      "@emotion/styled",
-      "dagre",
-      "lodash",
-      "fast-xml-parser",
-    ],
+    include: ["react", "react-dom"],
     exclude: ["express"],
   },
   esbuild: {
