@@ -15,6 +15,7 @@ import { useAppContext } from "./AppContext";
 import FieldsTab from "./FieldsTab";
 import FileUpload from "./FileUpload";
 import Changelog from "./Changelog";
+import Footer from "./Footer";
 
 const theme = createTheme();
 
@@ -187,6 +188,7 @@ function AppContent() {
           Upload a Tableau workbook to view fields
         </Box>
       )}
+      <Footer />
       <Changelog
         open={isChangelogOpen}
         onClose={() => setIsChangelogOpen(false)}
