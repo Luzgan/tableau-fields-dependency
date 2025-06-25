@@ -45,7 +45,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "index.js,index.html,package.json,package-lock.json"
+          source: "index.js,package.json,package-lock.json"
           target: "/home/${{ secrets.EC2_USERNAME }}/tableau-fields-dependency/"
 
       - name: Deploy built frontend files to EC2
