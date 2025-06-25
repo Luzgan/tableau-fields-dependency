@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:low-memory": "NODE_OPTIONS='--max-old-space-size=512' vite build",
+    "build:production": "NODE_OPTIONS='--max-old-space-size=512' vite build --mode production",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:e2e",
