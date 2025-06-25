@@ -10,15 +10,61 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: false,
     minify: "esbuild",
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        entryFileNames: "assets/[name].js",
-        chunkFileNames: "assets/[name].js",
-        assetFileNames: "assets/[name].[ext]",
-        manualChunks: {
-          vendor: ["react", "react-dom", "react-router-dom"],
+        entryFileNames: "assets/[name]-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
+        manualChunks: (id) => {
+          if (id.includes("node_modules")) {
+            if (id.includes("react") || id.includes("react-dom")) {
+              return "react-vendor";
+            }
+            if (id.includes("react-router")) {
+              return "router";
+            }
+            if (id.includes("@mui/material") || id.includes("@emotion")) {
+              return "mui-core";
+            }
+            if (id.includes("@mui/icons")) {
+              return "mui-icons";
+            }
+            if (id.includes("dagre")) {
+              return "graph";
+            }
+            if (id.includes("lodash") || id.includes("fast-xml-parser")) {
+              return "utils";
+            }
+            return "vendor";
+          }
         },
       },
+      external: ["express"],
     },
+    target: "es2015",
+    cssCodeSplit: true,
+    assetsInlineLimit: 4096,
+    reportCompressedSize: false,
+    emptyOutDir: true,
+  },
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "@mui/material",
+      "@mui/icons-material",
+      "@emotion/react",
+      "@emotion/styled",
+      "dagre",
+      "lodash",
+      "fast-xml-parser",
+    ],
+    exclude: ["express"],
+  },
+  esbuild: {
+    target: "es2015",
+    keepNames: false,
   },
 });

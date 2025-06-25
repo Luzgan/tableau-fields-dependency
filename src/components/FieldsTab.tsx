@@ -1,9 +1,26 @@
 import { Box, Grid } from "@mui/material";
-import React from "react";
+import React, { Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
-import FieldDetails from "./FieldDetails";
 import FieldsList from "./FieldsList";
 import NoFieldSelected from "./NoFieldSelected";
+
+// Lazy load the heaviest component
+const FieldDetails = React.lazy(() => import("./FieldDetails"));
+
+// Loading fallback for field details
+const FieldDetailsLoading: React.FC = () => (
+  <Box
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+      color: "text.secondary",
+    }}
+  >
+    Loading field details...
+  </Box>
+);
 
 const FieldsTab: React.FC = () => {
   return (
@@ -38,7 +55,14 @@ const FieldsTab: React.FC = () => {
           <Box sx={{ width: "100%" }}>
             <Routes>
               <Route path="/" element={<NoFieldSelected />} />
-              <Route path="/field/:id" element={<FieldDetails />} />
+              <Route
+                path="/field/:id"
+                element={
+                  <Suspense fallback={<FieldDetailsLoading />}>
+                    <FieldDetails />
+                  </Suspense>
+                }
+              />
             </Routes>
           </Box>
         </Grid>

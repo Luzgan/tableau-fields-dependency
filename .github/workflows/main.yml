@@ -52,6 +52,6 @@ jobs:
             ls -la
             git pull origin main
             npm ci
-            NODE_OPTIONS="--max-old-space-size=512" npm run build
+            npm run build:production
             sudo systemctl restart tableau-fields-dependency
             echo "Deployment completed"

@@ -8,14 +8,16 @@ import {
   Tooltip,
 } from "@mui/material";
 import { Clear, Update, Favorite, GitHub } from "@mui/icons-material";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, Suspense } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { NotificationProvider } from "./Notification";
 import { useAppContext } from "./AppContext";
-import FieldsTab from "./FieldsTab";
 import FileUpload from "./FileUpload";
-import Changelog from "./Changelog";
 import Footer from "./Footer";
+
+// Lazy load heavy components
+const FieldsTab = React.lazy(() => import("./FieldsTab"));
+const Changelog = React.lazy(() => import("./Changelog"));
 
 const theme = createTheme();
 
@@ -171,9 +173,11 @@ function AppContent() {
       </Box>
       {hasLoadedFile ? (
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          <Routes>
-            <Route path="/*" element={<FieldsTab />} />
-          </Routes>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route path="/*" element={<FieldsTab />} />
+            </Routes>
+          </Suspense>
         </Box>
       ) : (
         <Box
@@ -189,13 +193,30 @@ function AppContent() {
         </Box>
       )}
       <Footer />
-      <Changelog
-        open={isChangelogOpen}
-        onClose={() => setIsChangelogOpen(false)}
-      />
+      <Suspense fallback={null}>
+        <Changelog
+          open={isChangelogOpen}
+          onClose={() => setIsChangelogOpen(false)}
+        />
+      </Suspense>
     </Box>
   );
 }
+
+// Loading component for Suspense fallback
+const LoadingFallback: React.FC = () => (
+  <Box
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+      color: "text.secondary",
+    }}
+  >
+    Loading...
+  </Box>
+);
 
 const App: React.FC = () => {
   return (
