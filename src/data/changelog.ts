@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: "1.1.4",
+    date: "2025-06-29",
+    type: "improvement",
+    changes: [
+      "Removed calculation with internal names, to clarify the visibility of the calculation",
+    ],
+  },
+  {
     version: "1.1.3",
     date: "2025-06-25",
     type: "improvement",

@@ -61,23 +61,16 @@ function BasicInfo({ field }: { field: Node }) {
   const renderCalculationSpecificInfo = (node: CalculationNode) => (
     <>
       <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
-        Calculation Properties
+        Calculation
       </Typography>
-      {/* Show calculation with display names substituted */}
       {fileData && node.calculation && (
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" color={colors.text.secondary}>
-            Calculation (with display names)
-          </Typography>
           <Calculation
             calculation={node.calculation}
             nodeId={node.id}
             useDisplayNames={true}
           />
         </Box>
-      )}
-      {node.calculation && (
-        <Calculation calculation={node.calculation} nodeId={node.id} />
       )}
     </>
   );
