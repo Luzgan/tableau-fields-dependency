@@ -237,7 +237,7 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
 
         const relation = findRelationByName(relations, relationName);
 
-        const columns = ensureArray(relation.columns.column);
+        const columns = ensureArray(relation?.columns?.column);
         const column = columns.find((col) => col.name === fieldName);
         if (!column) {
           return;
