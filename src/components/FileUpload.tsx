@@ -49,6 +49,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ fileInputRef }) => {
           ? error.message
           : "An unexpected error occurred while processing the file";
 
+      if (process.env.NODE_ENV === "development") {
+        console.error(error);
+        console.trace(error);
+      }
       showNotification(errorMessage, "error");
       resetFileInput();
     }
