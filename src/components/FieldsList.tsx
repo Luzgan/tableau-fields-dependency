@@ -102,7 +102,9 @@ const FieldsList: React.FC = () => {
   const filteredNodes = filterNodes(nodes);
 
   return (
-    <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <Box
+      sx={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
+    >
       <Box sx={{ p: 2 }}>
         <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
           <TextField
@@ -262,6 +264,7 @@ const FieldsList: React.FC = () => {
               sx={{
                 p: 2,
                 mb: 1,
+                overflow: "hidden",
                 cursor: "pointer",
                 backgroundColor: node.id === id ? "primary.main" : "grey.100",
                 color: node.id === id ? "primary.contrastText" : "inherit",
@@ -279,7 +282,11 @@ const FieldsList: React.FC = () => {
                     fontSize: "1.2rem",
                   }}
                 />
-                <Typography>{node.displayName}</Typography>
+                <Tooltip title={node.displayName} placement="top">
+                  <Typography noWrap sx={{ flex: 1, minWidth: 0 }}>
+                    {node.displayName}
+                  </Typography>
+                </Tooltip>
               </Box>
               <Box sx={{ display: "flex", gap: 1, ml: 3.2 }}>
                 <Chip

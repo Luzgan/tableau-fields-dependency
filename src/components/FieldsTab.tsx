@@ -14,7 +14,6 @@ const FieldsTab: React.FC = () => {
           xs={3}
           sx={{
             height: "100%",
-            overflow: "hidden",
             display: "flex",
             borderRight: 2,
             borderColor: "divider",
