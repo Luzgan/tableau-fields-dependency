@@ -1,4 +1,5 @@
 .vscode/*
+.DS_Store
 test-file.twb
 node_modules
 example-files

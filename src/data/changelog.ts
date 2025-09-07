@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: "1.1.5",
+    date: "2025-09-07",
+    type: "improvement",
+    changes: [
+      "Fixed fields list layout issues when the screen is too narrow or text is too long",
+    ],
+  },
+  {
     version: "1.1.4",
     date: "2025-06-29",
     type: "improvement",
