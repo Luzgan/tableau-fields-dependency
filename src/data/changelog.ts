@@ -7,6 +7,24 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: "1.2.0",
+    date: "2026-03-06",
+    type: "feature",
+    changes: [
+      "Added 'Unused fields only' filter to show fields not used in any worksheet or calculation",
+    ],
+  },
+  {
+    version: "1.1.6",
+    date: "2026-03-06",
+    type: "fix",
+    changes: [
+      "Fixed filter toggles silently ignoring clicks when trying to deselect the last option",
+      "Added empty state message when no fields match the current filters",
+      "Replaced filter icon and fixed oval-shaped highlight",
+    ],
+  },
+  {
     version: "1.1.5",
     date: "2025-09-07",
     type: "improvement",

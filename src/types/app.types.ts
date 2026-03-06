@@ -48,6 +48,8 @@ export interface FileData extends TransformedTWBFileData {
 export interface TransformedTWBFileData {
   nodesById: Map<string, Node>;
   references: Reference[];
+  /** Node IDs of fields used in at least one worksheet or referenced by a calculation */
+  usedFieldIds: Set<string>;
 }
 
 export interface AppContextType {

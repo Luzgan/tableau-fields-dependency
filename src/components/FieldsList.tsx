@@ -8,6 +8,8 @@ import {
   Collapse,
   Tooltip,
   Chip,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import {
   TableChart as ColumnIcon,
@@ -59,6 +61,7 @@ const FieldsList: React.FC = () => {
     "measure",
     "dimension",
   ]);
+  const [showUnusedOnly, setShowUnusedOnly] = useState(false);
 
   const nodes = helpers.getNodes();
 
@@ -71,7 +74,8 @@ const FieldsList: React.FC = () => {
         false;
       const matchesType = selectedTypes.includes(node.type);
       const matchesRole = selectedRoles.includes(node.role);
-      return matchesSearch && matchesType && matchesRole;
+      const matchesUsage = !showUnusedOnly || !helpers.isFieldUsed(node.id);
+      return matchesSearch && matchesType && matchesRole && matchesUsage;
     });
   };
 
@@ -239,6 +243,21 @@ const FieldsList: React.FC = () => {
               </ToggleButton>
             ))}
           </ToggleButtonGroup>
+
+          <FormControlLabel
+            control={
+              <Switch
+                size="small"
+                checked={showUnusedOnly}
+                onChange={(e) => setShowUnusedOnly(e.target.checked)}
+                inputProps={{ "aria-label": "Show unused fields only" }}
+              />
+            }
+            label={
+              <Typography variant="body2">Unused fields only</Typography>
+            }
+            sx={{ ml: 0, mt: 1 }}
+          />
         </Collapse>
       </Box>
       <Box sx={{ flex: 1, overflow: "auto", px: 2 }}>

@@ -1,4 +1,8 @@
-import { TWBFile, getDefaultRoleForDatatype } from "../types/twb.types";
+import {
+  TWBFile,
+  getDefaultRoleForDatatype,
+  WorksheetDatasourceDependency,
+} from "../types/twb.types";
 import {
   TransformedTWBFileData,
   Node,
@@ -414,8 +418,56 @@ export function transformTWBData(twbFile: TWBFile): TransformedTWBFileData {
     }
   }
 
+  // Build set of field IDs used in worksheets
+  const worksheetUsedFieldIds = extractWorksheetFieldUsage(twbFile, nodesById);
+
+  // Build complete usedFieldIds: used in worksheet OR referenced by a calculation
+  const usedFieldIds = new Set<string>(worksheetUsedFieldIds);
+  for (const ref of references) {
+    if (ref.targetId) {
+      usedFieldIds.add(ref.targetId);
+    }
+    usedFieldIds.add(ref.sourceId);
+  }
+
   return {
     nodesById,
     references,
+    usedFieldIds,
   };
+}
+
+/**
+ * Extracts field IDs that are used in any worksheet via column-instance elements
+ */
+function extractWorksheetFieldUsage(
+  twbFile: TWBFile,
+  nodesById: Map<string, Node>
+): Set<string> {
+  const usedIds = new Set<string>();
+  const worksheets = ensureArray(twbFile.workbook.worksheets?.worksheet);
+
+  for (const ws of worksheets) {
+    const deps = ensureArray(
+      ws.table?.view?.["datasource-dependencies"] as
+        | WorksheetDatasourceDependency
+        | WorksheetDatasourceDependency[]
+        | undefined
+    );
+
+    for (const dep of deps) {
+      const datasourceName = dep.datasource;
+      const columnInstances = ensureArray(dep["column-instance"]);
+
+      for (const ci of columnInstances) {
+        const columnName = ci.column;
+        const id = generateNodeId(datasourceName, columnName);
+        if (nodesById.has(id)) {
+          usedIds.add(id);
+        }
+      }
+    }
+  }
+
+  return usedIds;
 }

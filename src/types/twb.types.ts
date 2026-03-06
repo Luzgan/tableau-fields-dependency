@@ -86,12 +86,51 @@ export interface Datasource {
 }
 
 /**
+ * Column instance within a worksheet's datasource-dependencies.
+ * Represents a field actively used on a worksheet shelf/filter.
+ */
+export interface ColumnInstance {
+  column: string;
+  derivation: string;
+  name: string;
+  type?: string;
+  pivot?: string;
+}
+
+/**
+ * Datasource dependency within a worksheet view.
+ * Contains column definitions and column-instance elements.
+ */
+export interface WorksheetDatasourceDependency {
+  datasource: string;
+  column?: Record<string, unknown> | Record<string, unknown>[];
+  "column-instance"?: ColumnInstance | ColumnInstance[];
+}
+
+/**
+ * Worksheet definition within the workbook
+ */
+export interface Worksheet {
+  name: string;
+  table?: {
+    view?: {
+      "datasource-dependencies"?:
+        | WorksheetDatasourceDependency
+        | WorksheetDatasourceDependency[];
+    };
+  };
+}
+
+/**
  * Root workbook structure
  */
 export interface TWBFile {
   workbook: {
     datasources: {
       datasource: Datasource | Datasource[];
+    };
+    worksheets?: {
+      worksheet?: Worksheet | Worksheet[];
     };
   };
 }
