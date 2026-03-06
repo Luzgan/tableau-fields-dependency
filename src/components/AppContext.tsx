@@ -18,6 +18,7 @@ interface AppContextType {
     getReferencedNodes: (nodeId: string) => Node[];
     getIndirectReferencingNodes: (nodeId: string) => Node[];
     getIndirectReferencedNodes: (nodeId: string) => Node[];
+    isFieldUsed: (nodeId: string) => boolean;
   };
 }
 
@@ -32,6 +33,7 @@ export const AppContext = createContext<AppContextType>({
     getReferencedNodes: () => [],
     getIndirectReferencingNodes: () => [],
     getIndirectReferencedNodes: () => [],
+    isFieldUsed: () => true,
   },
 });
 
@@ -79,6 +81,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     getIndirectReferencedNodes: (nodeId: string) => {
       if (!fileData) return [];
       return getIndirectReferencedNodes(fileData, nodeId);
+    },
+
+    isFieldUsed: (nodeId: string) => {
+      if (!fileData?.usedFieldIds) return true;
+      return fileData.usedFieldIds.has(nodeId);
     },
   };
 
