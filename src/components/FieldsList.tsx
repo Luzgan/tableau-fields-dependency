@@ -13,7 +13,7 @@ import {
   TableChart as ColumnIcon,
   Functions as CalculationIcon,
   Tune as ParameterIcon,
-  FilterList as FilterIcon,
+  FilterAlt as FilterIcon,
 } from "@mui/icons-material";
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -79,20 +79,14 @@ const FieldsList: React.FC = () => {
     _event: React.MouseEvent<HTMLElement>,
     newTypes: NodeType[]
   ) => {
-    // Ensure at least one type is selected
-    if (newTypes.length > 0) {
-      setSelectedTypes(newTypes);
-    }
+    setSelectedTypes(newTypes);
   };
 
   const handleRoleChange = (
     _event: React.MouseEvent<HTMLElement>,
     newRoles: string[]
   ) => {
-    // Ensure at least one role is selected
-    if (newRoles.length > 0) {
-      setSelectedRoles(newRoles);
-    }
+    setSelectedRoles(newRoles);
   };
 
   const handleFieldSelect = (node: Node) => {
@@ -122,6 +116,9 @@ const FieldsList: React.FC = () => {
               size="small"
               onClick={() => setShowFilters(!showFilters)}
               sx={{
+                width: 40,
+                height: 40,
+                alignSelf: "center",
                 backgroundColor: showFilters
                   ? "action.selected"
                   : "transparent",
@@ -245,6 +242,14 @@ const FieldsList: React.FC = () => {
         </Collapse>
       </Box>
       <Box sx={{ flex: 1, overflow: "auto", px: 2 }}>
+        {filteredNodes.length === 0 && (
+          <Typography
+            variant="body2"
+            sx={{ textAlign: "center", color: "text.secondary", py: 4 }}
+          >
+            No fields match the current filters
+          </Typography>
+        )}
         {filteredNodes.map((node) => {
           const config = nodeTypeConfig[node.type];
           const Icon = config.icon;
