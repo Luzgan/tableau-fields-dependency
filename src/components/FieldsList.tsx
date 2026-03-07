@@ -2,20 +2,18 @@ import {
   Box,
   TextField,
   Typography,
-  ToggleButton,
-  ToggleButtonGroup,
-  IconButton,
-  Collapse,
   Tooltip,
   Chip,
-  FormControlLabel,
-  Switch,
+  IconButton,
+  Popover,
+  Badge,
 } from "@mui/material";
 import {
   TableChart as ColumnIcon,
   Functions as CalculationIcon,
   Tune as ParameterIcon,
   FilterAlt as FilterIcon,
+  VisibilityOff as UnusedIcon,
 } from "@mui/icons-material";
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -26,17 +24,17 @@ import colors from "../theme/colors";
 const nodeTypeConfig = {
   datasource: {
     icon: ColumnIcon,
-    color: colors.datasource.border, // Using datasource border color
+    color: colors.datasource.border,
     label: "Data source fields",
   },
   calculation: {
     icon: CalculationIcon,
-    color: colors.calculation.border, // Using calculation border color
+    color: colors.calculation.border,
     label: "Calculated fields",
   },
   parameter: {
     icon: ParameterIcon,
-    color: colors.parameter.border, // Using parameter border color
+    color: colors.parameter.border,
     label: "Parameters",
   },
 };
@@ -46,26 +44,33 @@ const roleConfig = {
   dimension: { color: colors.dimension.border },
 };
 
+const allTypes: NodeType[] = ["datasource", "calculation", "parameter"];
+const allRoles = ["measure", "dimension"];
+
 const FieldsList: React.FC = () => {
   const { helpers } = useAppContext();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [searchTerm, setSearchTerm] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<NodeType[]>([
-    "datasource",
-    "calculation",
-    "parameter",
-  ]);
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([
-    "measure",
-    "dimension",
-  ]);
+  const [selectedTypes, setSelectedTypes] = useState<NodeType[]>([...allTypes]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([...allRoles]);
   const [showUnusedOnly, setShowUnusedOnly] = useState(false);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(
+    null
+  );
 
   const nodes = helpers.getNodes();
 
-  const filterNodes = (nodes: Node[]) => {
+  const filtersOpen = Boolean(filterAnchorEl);
+
+  const activeFilterCount =
+    (allTypes.length - selectedTypes.length) +
+    (allRoles.length - selectedRoles.length) +
+    (showUnusedOnly ? 1 : 0);
+
+  const isDefaultFilters = activeFilterCount === 0 && searchTerm === "";
+
+  const filterNodes = (nodes: Node[]): Node[] => {
     return nodes.filter((node) => {
       const matchesSearch =
         node.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,21 +84,26 @@ const FieldsList: React.FC = () => {
     });
   };
 
-  const handleTypeChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newTypes: NodeType[]
-  ) => {
-    setSelectedTypes(newTypes);
+  const toggleType = (type: NodeType): void => {
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
   };
 
-  const handleRoleChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newRoles: string[]
-  ) => {
-    setSelectedRoles(newRoles);
+  const toggleRole = (role: string): void => {
+    setSelectedRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
   };
 
-  const handleFieldSelect = (node: Node) => {
+  const handleClearAll = (): void => {
+    setSearchTerm("");
+    setSelectedTypes([...allTypes]);
+    setSelectedRoles([...allRoles]);
+    setShowUnusedOnly(false);
+  };
+
+  const handleFieldSelect = (node: Node): void => {
     navigate(`/field/${encodeURIComponent(node.id)}`);
   };
 
@@ -104,7 +114,7 @@ const FieldsList: React.FC = () => {
       sx={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
     >
       <Box sx={{ p: 2 }}>
-        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+        <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
           <TextField
             size="small"
             placeholder="Search fields..."
@@ -115,150 +125,208 @@ const FieldsList: React.FC = () => {
               "aria-label": "Search fields",
             }}
           />
-          <Tooltip title={`${showFilters ? "Hide" : "Show"} filters`}>
+          <Tooltip title={`${filtersOpen ? "Hide" : "Show"} filters`}>
             <IconButton
               size="small"
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={(e) =>
+                setFilterAnchorEl(filtersOpen ? null : e.currentTarget)
+              }
+              aria-label="Toggle filters"
               sx={{
                 width: 40,
                 height: 40,
                 alignSelf: "center",
-                backgroundColor: showFilters
+                backgroundColor: filtersOpen
                   ? "action.selected"
                   : "transparent",
                 "&:hover": {
-                  backgroundColor: showFilters
+                  backgroundColor: filtersOpen
                     ? "action.selected"
                     : "action.hover",
                 },
               }}
             >
-              <FilterIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-        <Collapse in={showFilters}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
-            Types
-          </Typography>
-          <ToggleButtonGroup
-            value={selectedTypes}
-            onChange={handleTypeChange}
-            aria-label="field types"
-            size="small"
-            orientation="vertical"
-            sx={{
-              width: "100%",
-              mb: 2,
-              "& .MuiToggleButton-root": {
-                textTransform: "none",
-                justifyContent: "flex-start",
-                px: 1.5,
-                py: 0.7,
-                borderRadius: "4px !important",
-                border: "none !important",
-                mb: 0.5,
-                "&:not(:first-of-type)": {
-                  borderRadius: "4px !important",
-                },
-              },
-            }}
-          >
-            {(Object.keys(nodeTypeConfig) as NodeType[]).map((type) => {
-              const Icon = nodeTypeConfig[type].icon;
-              const config = nodeTypeConfig[type];
-              return (
-                <ToggleButton
-                  key={type}
-                  value={type}
-                  aria-label={type}
-                  sx={{
-                    backgroundColor: `${config.color}10 !important`,
-                    "&.Mui-selected": {
-                      backgroundColor: `${config.color}20 !important`,
-                      color: `${config.color} !important`,
-                    },
-                    "&:hover": {
-                      backgroundColor: `${config.color}30 !important`,
-                    },
-                  }}
-                >
-                  <Icon sx={{ mr: 1, fontSize: "1.2rem" }} />
-                  {config.label}
-                </ToggleButton>
-              );
-            })}
-          </ToggleButtonGroup>
-
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
-            Roles
-          </Typography>
-          <ToggleButtonGroup
-            value={selectedRoles}
-            onChange={handleRoleChange}
-            aria-label="field roles"
-            size="small"
-            orientation="vertical"
-            sx={{
-              width: "100%",
-              mb: 2,
-              "& .MuiToggleButton-root": {
-                textTransform: "none",
-                justifyContent: "flex-start",
-                px: 1.5,
-                py: 0.7,
-                borderRadius: "4px !important",
-                border: "none !important",
-                mb: 0.5,
-                "&:not(:first-of-type)": {
-                  borderRadius: "4px !important",
-                },
-              },
-            }}
-          >
-            {Object.entries(roleConfig).map(([role, config]) => (
-              <ToggleButton
-                key={role}
-                value={role}
-                aria-label={role}
+              <Badge
+                badgeContent={activeFilterCount}
+                color="primary"
                 sx={{
-                  backgroundColor: `${config.color}10 !important`,
-                  "&.Mui-selected": {
-                    backgroundColor: `${config.color}20 !important`,
-                    color: `${config.color} !important`,
-                  },
-                  "&:hover": {
-                    backgroundColor: `${config.color}30 !important`,
+                  "& .MuiBadge-badge": {
+                    fontSize: "0.65rem",
+                    height: 16,
+                    minWidth: 16,
                   },
                 }}
               >
-                <Typography
+                <FilterIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{ color: "text.secondary" }}
+            aria-live="polite"
+          >
+            {filteredNodes.length === nodes.length
+              ? `${nodes.length} fields`
+              : `${filteredNodes.length} of ${nodes.length} fields`}
+          </Typography>
+          {!isDefaultFilters && (
+            <Typography
+              variant="caption"
+              onClick={handleClearAll}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") handleClearAll();
+              }}
+              sx={{
+                color: "primary.main",
+                cursor: "pointer",
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              Clear all
+            </Typography>
+          )}
+        </Box>
+        <Popover
+          open={filtersOpen}
+          anchorEl={filterAnchorEl}
+          onClose={() => setFilterAnchorEl(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+          slotProps={{
+            paper: {
+              sx: {
+                p: 2,
+                mt: 1,
+                minWidth: 220,
+                borderRadius: 2,
+              },
+            },
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            sx={{ mb: 1, fontWeight: 600, color: "text.secondary" }}
+          >
+            Types
+          </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 2 }}>
+            {(Object.keys(nodeTypeConfig) as NodeType[]).map((type) => {
+              const config = nodeTypeConfig[type];
+              const Icon = config.icon;
+              const selected = selectedTypes.includes(type);
+              return (
+                <Chip
+                  key={type}
+                  icon={<Icon sx={{ fontSize: "1rem" }} />}
+                  label={config.label}
+                  size="small"
+                  onClick={() => toggleType(type)}
+                  aria-label={type}
+                  aria-pressed={selected}
                   sx={{
-                    textTransform: "capitalize",
-                    fontSize: "0.875rem",
+                    cursor: "pointer",
+                    justifyContent: "flex-start",
+                    fontWeight: 500,
+                    fontSize: "0.8rem",
+                    backgroundColor: selected
+                      ? `${config.color}20`
+                      : "transparent",
+                    color: selected ? config.color : "text.disabled",
+                    border: `1px solid ${selected ? config.color : "#e0e0e0"}`,
+                    opacity: selected ? 1 : 0.6,
+                    "& .MuiChip-icon": {
+                      color: selected ? config.color : "text.disabled",
+                    },
+                    "&:hover": {
+                      backgroundColor: `${config.color}15`,
+                    },
                   }}
-                >
-                  {role}
-                </Typography>
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
+                />
+              );
+            })}
+          </Box>
 
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={showUnusedOnly}
-                onChange={(e) => setShowUnusedOnly(e.target.checked)}
-                inputProps={{ "aria-label": "Show unused fields only" }}
-              />
-            }
-            label={
-              <Typography variant="body2">Unused fields only</Typography>
-            }
-            sx={{ ml: 0, mt: 1 }}
+          <Typography
+            variant="subtitle2"
+            sx={{ mb: 1, fontWeight: 600, color: "text.secondary" }}
+          >
+            Roles
+          </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 2 }}>
+            {Object.entries(roleConfig).map(([role, config]) => {
+              const selected = selectedRoles.includes(role);
+              return (
+                <Chip
+                  key={role}
+                  label={role.charAt(0).toUpperCase() + role.slice(1)}
+                  size="small"
+                  onClick={() => toggleRole(role)}
+                  aria-label={role}
+                  aria-pressed={selected}
+                  sx={{
+                    cursor: "pointer",
+                    justifyContent: "flex-start",
+                    fontWeight: 500,
+                    fontSize: "0.8rem",
+                    backgroundColor: selected
+                      ? `${config.color}20`
+                      : "transparent",
+                    color: selected ? config.color : "text.disabled",
+                    border: `1px solid ${selected ? config.color : "#e0e0e0"}`,
+                    opacity: selected ? 1 : 0.6,
+                    "&:hover": {
+                      backgroundColor: `${config.color}15`,
+                    },
+                  }}
+                />
+              );
+            })}
+          </Box>
+
+          <Typography
+            variant="subtitle2"
+            sx={{ mb: 1, fontWeight: 600, color: "text.secondary" }}
+          >
+            Usage
+          </Typography>
+          <Chip
+            icon={<UnusedIcon sx={{ fontSize: "1rem" }} />}
+            label="Unused fields only"
+            size="small"
+            onClick={() => setShowUnusedOnly((prev) => !prev)}
+            aria-label="unused only"
+            aria-pressed={showUnusedOnly}
+            sx={{
+              cursor: "pointer",
+              justifyContent: "flex-start",
+              fontWeight: 500,
+              fontSize: "0.8rem",
+              backgroundColor: showUnusedOnly
+                ? `${colors.error}20`
+                : "transparent",
+              color: showUnusedOnly ? colors.error : "text.disabled",
+              border: `1px solid ${showUnusedOnly ? colors.error : "#e0e0e0"}`,
+              opacity: showUnusedOnly ? 1 : 0.6,
+              "& .MuiChip-icon": {
+                color: showUnusedOnly ? colors.error : "text.disabled",
+              },
+              "&:hover": {
+                backgroundColor: `${colors.error}15`,
+              },
+            }}
           />
-        </Collapse>
+        </Popover>
       </Box>
       <Box sx={{ flex: 1, overflow: "auto", px: 2 }}>
         {filteredNodes.length === 0 && (
