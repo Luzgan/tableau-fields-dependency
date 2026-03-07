@@ -7,6 +7,17 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: "1.3.0",
+    date: "2026-03-07",
+    type: "improvement",
+    changes: [
+      "Redesigned filter UI: popover panel replaces inline filters for a cleaner layout",
+      "Added badge on filter icon showing number of active filters",
+      "Added field count display with 'X of Y fields' when filters are active",
+      "Added 'Clear all' action to reset all filters at once",
+    ],
+  },
+  {
     version: "1.2.0",
     date: "2026-03-06",
     type: "feature",
